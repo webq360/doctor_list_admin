@@ -109,6 +109,38 @@ export default function Sidebar() {
           Ambulance
         </Link>
 
+        {/* Ambulance Users */}
+        <Link
+          href="/ambulance-users"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            pathname === '/ambulance-users' ? 'text-white' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+          }`}
+          style={pathname === '/ambulance-users' ? { background: '#2B3EE6' } : {}}
+        >
+          <span className={pathname === '/ambulance-users' ? 'text-white' : 'text-gray-400'}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </span>
+          Ambulance Users
+        </Link>
+
+        {/* Doctor by Disease */}
+        <Link
+          href="/doctors-by-disease"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            pathname === '/doctors-by-disease' ? 'text-white' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+          }`}
+          style={pathname === '/doctors-by-disease' ? { background: '#2B3EE6' } : {}}
+        >
+          <span className={pathname === '/doctors-by-disease' ? 'text-white' : 'text-gray-400'}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          </span>
+          Doctor by Disease
+        </Link>
+
         {/* Doctor List */}
         <Link
           href="/doctors"
@@ -188,10 +220,75 @@ export default function Sidebar() {
           </span>
           Notifications
         </Link>
+
+        {/* Eye Care Centers */}
+        <Link
+          href="/eye-care-centers"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            pathname === '/eye-care-centers' ? 'text-white' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+          }`}
+          style={pathname === '/eye-care-centers' ? { background: '#2B3EE6' } : {}}
+        >
+          <span className={pathname === '/eye-care-centers' ? 'text-white' : 'text-gray-400'}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </span>
+          Eye Care Center
+        </Link>
+
+        {/* Hearing Aid Centers */}
+        <Link
+          href="/hearing-aid-centers"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            pathname === '/hearing-aid-centers' ? 'text-white' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+          }`}
+          style={pathname === '/hearing-aid-centers' ? { background: '#2B3EE6' } : {}}
+        >
+          <span className={pathname === '/hearing-aid-centers' ? 'text-white' : 'text-gray-400'}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+          </span>
+          Hearing Aid Center
+        </Link>
+
+        {/* Dental Clinics */}
+        <Link
+          href="/dental-clinics"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            pathname === '/dental-clinics' ? 'text-white' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+          }`}
+          style={pathname === '/dental-clinics' ? { background: '#2B3EE6' } : {}}
+        >
+          <span className={pathname === '/dental-clinics' ? 'text-white' : 'text-gray-400'}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </span>
+          Dental Clinic
+        </Link>
+
+        {/* Drug Rehabilitation Centers */}
+        <Link
+          href="/drug-rehabilitation-centers"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            pathname === '/drug-rehabilitation-centers' ? 'text-white' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+          }`}
+          style={pathname === '/drug-rehabilitation-centers' ? { background: '#2B3EE6' } : {}}
+        >
+          <span className={pathname === '/drug-rehabilitation-centers' ? 'text-white' : 'text-gray-400'}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </span>
+          Drug Rehab Center
+        </Link>
       </nav>
 
       {/* Logout */}
-      <div className="px-3 py-4 border-t border-gray-100 space-y-0.5">
+      <div suppressHydrationWarning className="px-3 py-4 border-t border-gray-100 space-y-0.5">
         <Link
           href="/settings"
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${

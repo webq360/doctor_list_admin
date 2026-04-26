@@ -77,13 +77,21 @@ export default function BloodBankPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this blood bank?')) return;
-    await api.delete(`/blood-banks/${id}`);
-    setBanks((p) => p.filter((b) => b._id !== id));
+    try {
+      await api.delete(`/blood-banks/${id}`);
+      setBanks((p) => p.filter((b) => b._id !== id));
+    } catch {
+      alert('Failed to delete. Please try again.');
+    }
   };
 
   const toggleActive = async (b: BloodBank) => {
-    const { data } = await api.put(`/blood-banks/${b._id}`, { isActive: !b.isActive });
-    setBanks((p) => p.map((x) => x._id === b._id ? data : x));
+    try {
+      const { data } = await api.put(`/blood-banks/${b._id}`, { isActive: !b.isActive });
+      setBanks((p) => p.map((x) => x._id === b._id ? data : x));
+    } catch {
+      alert('Failed to update status. Please try again.');
+    }
   };
 
   const addBtn = (

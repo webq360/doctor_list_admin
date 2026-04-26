@@ -29,19 +29,20 @@ export default function AppointmentsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
-              {['Patient', 'Doctor', 'Date', 'Time', 'Status', 'Action'].map((h) => (
+              {['Patient', 'Doctor', 'Hospital', 'Date', 'Time', 'Status', 'Action'].map((h) => (
                 <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {appointments.length === 0 && (
-              <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-300 text-sm">No appointments found</td></tr>
+              <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-300 text-sm">No appointments found</td></tr>
             )}
             {appointments.map((a) => (
               <tr key={a._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                 <td className="px-5 py-3.5 font-medium text-gray-700">{a.patientId?.name}</td>
                 <td className="px-5 py-3.5 text-gray-500">{a.doctorId?.userId?.name}</td>
+                <td className="px-5 py-3.5 text-gray-500 text-xs">{(a as any).hospitalId?.name || '—'}</td>
                 <td className="px-5 py-3.5 text-gray-500">{a.date}</td>
                 <td className="px-5 py-3.5 text-gray-500">{a.time}</td>
                 <td className="px-5 py-3.5">

@@ -47,8 +47,13 @@ export interface Hospital {
   _id: string;
   name: string;
   address: string;
-  location: { lat: number; lng: number };
+  division?: string;
+  district?: string;
+  upazila?: string;
+  location?: { lat: number; lng: number };
   contact: string;
+  logo?: string;
+  coverImage?: string;
 }
 
 export interface Appointment {

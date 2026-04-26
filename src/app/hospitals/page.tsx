@@ -35,68 +35,233 @@ function ImageUpload({ label, preview, onChange }: {
 const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors';
 const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
 
-const emptyServiceForm = { name: '', shortTitle: '', about: '', offerInput: '', offers: [] as string[], doctors: [] as string[] };
+const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+// ── Schedule Manager for a doctor at a specific hospital ──
+function ScheduleManager({ hospitalId, doctorId, doctorName }: { hospitalId: string; doctorId: string; doctorName: string }) {
+  const [open, setOpen] = useState(false);
+  const [schedule, setSchedule] = useState<{ day: string; startTime: string; endTime: string }[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const load = async () => {
+    try {
+      const { data } = await api.get(`/hospitals/${hospitalId}/doctors/${doctorId}/schedule`);
+      setSchedule(data.schedule || []);
+    } catch { setSchedule([]); }
+  };
+
+  const toggleDay = (day: string) => {
+    setSchedule((p) => {
+      const exists = p.find((s) => s.day === day);
+      if (exists) return p.filter((s) => s.day !== day);
+      return [...p, { day, startTime: '09:00', endTime: '17:00' }];
+    });
+  };
+
+  const updateTime = (day: string, field: 'startTime' | 'endTime', value: string) => {
+    setSchedule((p) => p.map((s) => s.day === day ? { ...s, [field]: value } : s));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.put(`/hospitals/${hospitalId}/doctors/${doctorId}/schedule`, { schedule });
+      setSaved(true); setTimeout(() => setSaved(false), 2000);
+    } catch { /* silent */ }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <>
+      <button onClick={() => { setOpen(true); load(); }}
+        className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors font-medium">
+        Schedule
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="min-h-full flex items-start justify-center p-6 py-10">
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">Appointment Schedule</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{doctorName} — at this hospital</p>
+                </div>
+                <button onClick={() => setOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div className="px-6 py-5 space-y-3">
+                <p className="text-xs text-gray-500">Select days and set appointment hours. Patients will see these times when booking at this hospital.</p>
+                {DAYS.map((day) => {
+                  const entry = schedule.find((s) => s.day === day);
+                  const active = !!entry;
+                  return (
+                    <div key={day} className={`rounded-xl border transition-colors ${active ? 'border-blue-200 bg-blue-50' : 'border-gray-100 bg-gray-50'}`}>
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <button type="button" onClick={() => toggleDay(day)}
+                          className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors ${active ? 'bg-blue-500' : 'border border-gray-300 bg-white'}`}>
+                          {active && <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                        </button>
+                        <span className={`text-sm font-medium flex-1 ${active ? 'text-blue-800' : 'text-gray-500'}`}>{day}</span>
+                        {active && (
+                          <div className="flex items-center gap-2">
+                            <input type="time" value={entry.startTime}
+                              onChange={(e) => updateTime(day, 'startTime', e.target.value)}
+                              className="text-xs border border-blue-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400 bg-white" />
+                            <span className="text-xs text-gray-400">to</span>
+                            <input type="time" value={entry.endTime}
+                              onChange={(e) => updateTime(day, 'endTime', e.target.value)}
+                              className="text-xs border border-blue-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400 bg-white" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="flex gap-3 pt-2">
+                  <button onClick={handleSave} disabled={saving}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all"
+                    style={{ background: saved ? '#22c55e' : '#2B3EE6' }}>
+                    {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save Schedule'}
+                  </button>
+                  <button onClick={() => setOpen(false)} className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200">
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+const emptyServiceForm = { name: '', about: '', ourServiceText: '' };
+const emptyEditForm = { id: '', name: '', about: '' };
 
 function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doctors' | 'ambulances' | 'services' }) {
   const [items, setItems] = useState<any[]>([]);
   const [allItems, setAllItems] = useState<any[]>([]);
   const [selected, setSelected] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Our Services global text
+  const [ourServicesText, setOurServicesText] = useState('');
+  const [ourServicesSaving, setOurServicesSaving] = useState(false);
+  const [ourServicesSaved, setOurServicesSaved] = useState(false);
+
+  // Add service form
   const [showServiceForm, setShowServiceForm] = useState(false);
   const [svcForm, setSvcForm] = useState(emptyServiceForm);
-  const [iconFile, setIconFile] = useState<File | null>(null);
-  const [iconPreview, setIconPreview] = useState('');
+  const [serviceImageFile, setServiceImageFile] = useState<File | null>(null);
+  const [serviceImagePreview, setServiceImagePreview] = useState('');
   const [svcError, setSvcError] = useState('');
+  const [svcSaving, setSvcSaving] = useState(false);
+
+  // Edit service
+  const [editItem, setEditItem] = useState<any>(null);
+  const [editForm, setEditForm] = useState(emptyEditForm);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
   const fetchItems = (hid: string, t: string) =>
-    api.get(`/hospitals/${hid}/${t}`).then((r) => setItems(r.data)).catch(() => setItems([]));
+    api.get(`/hospitals/${hid}/${t}`).then((r) => {
+      setItems(r.data);
+      // Load existing ourService text from first service that has it
+      if (t === 'services' && Array.isArray(r.data)) {
+        const existing = r.data.find((s: any) => s.ourService?.trim());
+        if (existing) setOurServicesText(existing.ourService);
+      }
+    }).catch(() => setItems([]));
 
   useEffect(() => {
     setItems([]); setSelected('');
-    setShowServiceForm(false); setSvcForm(emptyServiceForm); setIconFile(null); setIconPreview('');
+    setShowServiceForm(false); setSvcForm(emptyServiceForm);
+    setServiceImageFile(null); setServiceImagePreview('');
+    setSvcError('');
+    setEditItem(null); setEditForm(emptyEditForm);
+    setEditImageFile(null); setEditImagePreview('');
+    setOurServicesSaved(false);
     fetchItems(hospitalId, tab);
-    if (tab === 'doctors' || tab === 'services') api.get('/doctors').then((r) => setAllItems(r.data)).catch(() => {});
+    if (tab === 'doctors') api.get('/doctors').then((r) => setAllItems(r.data)).catch(() => {});
     else if (tab === 'ambulances') api.get('/ambulance').then((r) => setAllItems(r.data)).catch(() => {});
   }, [tab, hospitalId]);
 
-  const handleAddOffer = () => {
-    if (!svcForm.offerInput.trim()) return;
-    setSvcForm((p) => ({ ...p, offers: [...p.offers, p.offerInput.trim()], offerInput: '' }));
+  const handleSaveOurServices = async () => {
+    if (!ourServicesText.trim()) return;
+    setOurServicesSaving(true);
+    try {
+      // Save ourService text to all existing services, or create a placeholder if none exist
+      if (items.length > 0) {
+        await Promise.all(
+          items.map((item) =>
+            api.put(`/hospitals/${hospitalId}/services/${item._id}`, {
+              name: item.name,
+              about: item.about,
+              ourService: ourServicesText,
+              serviceImageUrl: item.serviceImageUrl,
+            })
+          )
+        );
+        fetchItems(hospitalId, tab);
+      }
+      setOurServicesSaved(true);
+      setTimeout(() => setOurServicesSaved(false), 2500);
+    } catch { /* silent */ }
+    finally { setOurServicesSaving(false); }
   };
-
-  const handleRemoveOffer = (i: number) =>
-    setSvcForm((p) => ({ ...p, offers: p.offers.filter((_, idx) => idx !== i) }));
-
-  const toggleDoctor = (id: string) =>
-    setSvcForm((p) => ({
-      ...p,
-      doctors: p.doctors.includes(id) ? p.doctors.filter((d) => d !== id) : [...p.doctors, id],
-    }));
 
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!svcForm.name.trim()) return setSvcError('Service name is required');
-    setSvcError(''); setLoading(true);
+    if (!svcForm.name.trim()) return setSvcError('Service title is required');
+    setSvcError(''); setSvcSaving(true);
     try {
-      let iconUrl;
-      if (iconFile) {
-        const fd = new FormData(); fd.append('image', iconFile);
+      let serviceImageUrl;
+      if (serviceImageFile) {
+        const fd = new FormData(); fd.append('image', serviceImageFile);
         const { data } = await api.post('/upload/hospital', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-        iconUrl = data.url;
+        serviceImageUrl = data.url;
       }
       await api.post(`/hospitals/${hospitalId}/services`, {
         name: svcForm.name,
-        shortTitle: svcForm.shortTitle || undefined,
         about: svcForm.about || undefined,
-        whatWeOffer: svcForm.offers,
-        availableDoctors: svcForm.doctors,
-        iconUrl,
+        ourService: ourServicesText || undefined,
+        serviceImageUrl,
       });
-      setSvcForm(emptyServiceForm); setIconFile(null); setIconPreview('');
+      setSvcForm(emptyServiceForm);
+      setServiceImageFile(null); setServiceImagePreview('');
       setShowServiceForm(false);
       fetchItems(hospitalId, tab);
-    } catch { setSvcError('Failed to add service'); }
-    finally { setLoading(false); }
+    } catch { setSvcError('Failed to save service'); }
+    finally { setSvcSaving(false); }
+  };
+
+  const handleUpdateService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editForm.name.trim()) return setEditError('Service title is required');
+    setEditError(''); setEditSaving(true);
+    try {
+      let serviceImageUrl = editItem.serviceImageUrl;
+      if (editImageFile) {
+        const fd = new FormData(); fd.append('image', editImageFile);
+        const { data } = await api.post('/upload/hospital', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        serviceImageUrl = data.url;
+      }
+      await api.put(`/hospitals/${hospitalId}/services/${editItem._id}`, {
+        name: editForm.name,
+        about: editForm.about || undefined,
+        ourService: ourServicesText || editItem.ourService || undefined,
+        serviceImageUrl,
+      });
+      setEditItem(null); setEditForm(emptyEditForm);
+      setEditImageFile(null); setEditImagePreview('');
+      fetchItems(hospitalId, tab);
+    } catch { setEditError('Failed to update service'); }
+    finally { setEditSaving(false); }
   };
 
   const handleAdd = async () => {
@@ -120,160 +285,230 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
   const available = allItems.filter((i) => !linkedIds.has(i._id));
 
   if (tab === 'services') return (
-    <div className="space-y-4">
-      {!showServiceForm ? (
-        <button onClick={() => setShowServiceForm(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white"
+    <div className="space-y-5">
+
+      {/* ── Our Services Global Text Field ── */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-4 space-y-3 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-4 rounded-full bg-blue-500" />
+          <p className="text-sm font-semibold text-gray-800">Our Services</p>
+        </div>
+        <textarea
+          rows={4}
+          placeholder="Write about your hospital's services here. This text will appear in the app under 'Our Services'..."
+          value={ourServicesText}
+          onChange={(e) => { setOurServicesText(e.target.value); setOurServicesSaved(false); }}
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-400 transition-colors resize-none text-gray-700 placeholder-gray-300"
+        />
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-400">This content shows at the top of the Services section in the app</p>
+          <button
+            onClick={handleSaveOurServices}
+            disabled={ourServicesSaving || !ourServicesText.trim() || items.length === 0}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-40 transition-all"
+            style={{ background: ourServicesSaved ? '#22c55e' : '#2B3EE6' }}>
+            {ourServicesSaving ? (
+              <span>Saving...</span>
+            ) : ourServicesSaved ? (
+              <><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg> Saved</>
+            ) : (
+              <><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg> Save</>
+            )}
+          </button>
+        </div>
+        {items.length === 0 && ourServicesText.trim() && (
+          <p className="text-xs text-amber-500">Add at least one service first to save this text</p>
+        )}
+      </div>
+
+      {/* ── Add New Service Button / Form ── */}
+      {!showServiceForm && !editItem ? (
+        <button
+          onClick={() => { setShowServiceForm(true); setSvcError(''); }}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
           style={{ background: '#2B3EE6' }}>
-          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          Add Service
+          Add New Service
         </button>
-      ) : (
-        <form onSubmit={handleAddService} className="border border-gray-100 rounded-2xl p-5 space-y-4 bg-gray-50">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-sm font-semibold text-gray-700">New Service</p>
-            <button type="button" onClick={() => { setShowServiceForm(false); setSvcForm(emptyServiceForm); setIconFile(null); setIconPreview(''); }}
-              className="text-xs text-gray-400 hover:text-gray-600">✕ Cancel</button>
+      ) : showServiceForm ? (
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50">
+            <p className="text-sm font-semibold text-gray-800">New Service</p>
+            <button type="button"
+              onClick={() => { setShowServiceForm(false); setSvcForm(emptyServiceForm); setServiceImageFile(null); setServiceImagePreview(''); setSvcError(''); }}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-200 transition-colors text-lg">✕</button>
           </div>
-          {svcError && <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-xl">{svcError}</p>}
-
-          {/* Icon Upload */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Service Icon <span className="text-gray-300">(optional)</span></label>
-            <label className="flex items-center gap-3 border border-dashed border-gray-200 rounded-xl px-4 py-3 cursor-pointer hover:border-blue-400 transition-colors bg-white">
-              {iconPreview
-                ? <img src={iconPreview} alt="icon" className="w-10 h-10 rounded-lg object-cover" />
-                : <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-xl">🏥</div>}
-              <span className="text-xs text-gray-400">{iconFile ? iconFile.name : 'Click to upload icon image'}</span>
-              <input type="file" accept="image/*" className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) { setIconFile(f); setIconPreview(URL.createObjectURL(f)); } }} />
-            </label>
-          </div>
-
-          {/* Name & Short Title */}
-          <div className="grid grid-cols-2 gap-3">
+          <form onSubmit={handleAddService} className="p-5 space-y-4">
+            {svcError && <p className="text-xs text-red-500 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{svcError}</p>}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Service Name<span className="text-red-400 ml-0.5">*</span></label>
-              <input placeholder="e.g. Cardiology" value={svcForm.name}
-                onChange={(e) => setSvcForm((p) => ({ ...p, name: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 bg-white" />
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service Title <span className="text-red-400">*</span></label>
+              <input placeholder="e.g. X-Ray, Cardiology, MRI..."
+                value={svcForm.name} onChange={(e) => setSvcForm((p) => ({ ...p, name: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Short Title <span className="text-gray-300">(optional)</span></label>
-              <input placeholder="e.g. Heart Care" value={svcForm.shortTitle}
-                onChange={(e) => setSvcForm((p) => ({ ...p, shortTitle: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 bg-white" />
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service Description</label>
+              <textarea placeholder="Describe this service. Longer than 7 lines → 'Read More' in app..."
+                value={svcForm.about} rows={5} onChange={(e) => setSvcForm((p) => ({ ...p, about: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors resize-none" />
             </div>
-          </div>
-
-          {/* About */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">About Service <span className="text-gray-300">(optional)</span></label>
-            <textarea placeholder="Brief description of this service..." value={svcForm.about} rows={3}
-              onChange={(e) => setSvcForm((p) => ({ ...p, about: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 resize-none bg-white" />
-          </div>
-
-          {/* What We Offer */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">What We Offer <span className="text-gray-300">(optional)</span></label>
-            <div className="flex gap-2 mb-2">
-              <input placeholder="Add an offer point..." value={svcForm.offerInput}
-                onChange={(e) => setSvcForm((p) => ({ ...p, offerInput: e.target.value }))}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddOffer(); } }}
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 bg-white" />
-              <button type="button" onClick={handleAddOffer}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium text-white"
-                style={{ background: '#2B3EE6' }}>Add</button>
-            </div>
-            {svcForm.offers.length > 0 && (
-              <div className="space-y-1.5">
-                {svcForm.offers.map((o, i) => (
-                  <div key={i} className="flex items-center justify-between px-3 py-2 bg-white border border-gray-100 rounded-xl">
-                    <span className="text-sm text-gray-700">✓ {o}</span>
-                    <button type="button" onClick={() => handleRemoveOffer(i)}
-                      className="text-xs text-red-400 hover:text-red-600">✕</button>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service Image</label>
+              <label className="flex items-center justify-center border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-blue-400 transition-colors overflow-hidden bg-gray-50" style={{ minHeight: 110 }}>
+                {serviceImagePreview ? (
+                  <div className="relative w-full">
+                    <img src={serviceImagePreview} alt="preview" className="w-full object-cover" style={{ maxHeight: 160 }} />
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                      <span className="text-white text-xs font-medium bg-black/50 px-3 py-1 rounded-lg">Change Image</span>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-6">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2B3EE6" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-medium text-gray-500">Click to upload image</span>
+                  </div>
+                )}
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) { setServiceImageFile(f); setServiceImagePreview(URL.createObjectURL(f)); } }} />
+              </label>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button type="submit" disabled={svcSaving}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity hover:opacity-90"
+                style={{ background: '#2B3EE6' }}>
+                {svcSaving ? 'Saving...' : 'Save Service'}
+              </button>
+              <button type="button"
+                onClick={() => { setShowServiceForm(false); setSvcForm(emptyServiceForm); setServiceImageFile(null); setServiceImagePreview(''); setSvcError(''); }}
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : editItem ? (
+        /* ── Edit Service Form ── */
+        <div className="bg-white border border-blue-100 rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-blue-100 bg-blue-50">
+            <p className="text-sm font-semibold text-gray-800">Edit Service</p>
+            <button type="button"
+              onClick={() => { setEditItem(null); setEditForm(emptyEditForm); setEditImageFile(null); setEditImagePreview(''); setEditError(''); }}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-blue-100 transition-colors text-lg">✕</button>
           </div>
+          <form onSubmit={handleUpdateService} className="p-5 space-y-4">
+            {editError && <p className="text-xs text-red-500 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{editError}</p>}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service Title <span className="text-red-400">*</span></label>
+              <input placeholder="e.g. X-Ray, Cardiology, MRI..."
+                value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service Description</label>
+              <textarea placeholder="Describe this service..."
+                value={editForm.about} rows={5} onChange={(e) => setEditForm((p) => ({ ...p, about: e.target.value }))}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors resize-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service Image</label>
+              <label className="flex items-center justify-center border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-blue-400 transition-colors overflow-hidden bg-gray-50" style={{ minHeight: 110 }}>
+                {(editImagePreview || editItem.serviceImageUrl) ? (
+                  <div className="relative w-full">
+                    <img src={editImagePreview || editItem.serviceImageUrl} alt="preview" className="w-full object-cover" style={{ maxHeight: 160 }} />
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                      <span className="text-white text-xs font-medium bg-black/50 px-3 py-1 rounded-lg">Change Image</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-6">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2B3EE6" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-medium text-gray-500">Click to upload image</span>
+                  </div>
+                )}
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) { setEditImageFile(f); setEditImagePreview(URL.createObjectURL(f)); } }} />
+              </label>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button type="submit" disabled={editSaving}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity hover:opacity-90"
+                style={{ background: '#2B3EE6' }}>
+                {editSaving ? 'Updating...' : 'Update Service'}
+              </button>
+              <button type="button"
+                onClick={() => { setEditItem(null); setEditForm(emptyEditForm); setEditImageFile(null); setEditImagePreview(''); setEditError(''); }}
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
 
-          {/* Available Doctors */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Available Doctors <span className="text-gray-300">(optional)</span></label>
-            {allItems.length === 0
-              ? <p className="text-xs text-gray-300">No doctors found</p>
-              : <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
-                  {allItems.map((d) => (
-                    <label key={d._id} className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-colors ${
-                      svcForm.doctors.includes(d._id) ? 'border-blue-400 bg-blue-50' : 'border-gray-100 bg-white hover:border-gray-200'
-                    }`}>
-                      <input type="checkbox" className="hidden" checked={svcForm.doctors.includes(d._id)}
-                        onChange={() => toggleDoctor(d._id)} />
-                      <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${
-                        svcForm.doctors.includes(d._id) ? 'bg-blue-500' : 'border border-gray-300'
-                      }`}>
-                        {svcForm.doctors.includes(d._id) && (
-                          <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                      <span className="text-xs text-gray-700 truncate">{d.userId?.name || 'Unknown'}</span>
-                      <span className="text-xs text-gray-400 truncate">{d.specialization}</span>
-                    </label>
-                  ))}
+      {/* ── Service List ── */}
+      {items.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
+            {items.length} Service{items.length > 1 ? 's' : ''} Added
+          </p>
+          {items.map((item) => (
+            <div key={item._id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2B3EE6" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-800">{item.name}</p>
                 </div>
-            }
-          </div>
-
-          <button type="submit" disabled={loading}
-            className="w-full py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-60"
-            style={{ background: '#2B3EE6' }}>
-            {loading ? 'Saving...' : 'Save Service'}
-          </button>
-        </form>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setEditItem(item); setEditForm({ id: item._id, name: item.name, about: item.about || '' }); setEditImageFile(null); setEditImagePreview(''); setEditError(''); setShowServiceForm(false); }}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors font-medium">
+                    Edit
+                  </button>
+                  <button onClick={() => handleRemove(item._id)}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors font-medium">
+                    Delete
+                  </button>
+                </div>
+              </div>
+              {(item.about || item.ourService) && (
+                <div className="px-4 py-3 border-b border-gray-50">
+                  <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{item.ourService || item.about}</p>
+                </div>
+              )}
+              {item.serviceImageUrl && (
+                <img src={item.serviceImageUrl} alt={item.name} className="w-full object-cover" style={{ maxHeight: 140 }} />
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* Service List */}
-      <div className="space-y-3">
-        {items.length === 0 && !showServiceForm && <p className="text-xs text-gray-300 text-center py-6">No services added yet</p>}
-        {items.map((item) => (
-          <div key={item._id} className="bg-white border border-gray-100 rounded-2xl p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                {item.iconUrl
-                  ? <img src={item.iconUrl} alt={item.name} className="w-10 h-10 rounded-xl object-cover shrink-0" />
-                  : <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-400 text-lg shrink-0">🏥</div>}
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                  {item.shortTitle && <p className="text-xs text-blue-500">{item.shortTitle}</p>}
-                </div>
-              </div>
-              <button onClick={() => handleRemove(item._id)}
-                className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors shrink-0">Remove</button>
-            </div>
-            {item.about && <p className="text-xs text-gray-500 mt-2 ml-13">{item.about}</p>}
-            {item.whatWeOffer?.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {item.whatWeOffer.map((o: string, i: number) => (
-                  <span key={i} className="text-xs px-2.5 py-1 bg-green-50 text-green-600 rounded-lg">✓ {o}</span>
-                ))}
-              </div>
-            )}
-            {item.availableDoctors?.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {item.availableDoctors.map((d: any) => (
-                  <span key={d._id} className="text-xs px-2.5 py-1 bg-purple-50 text-purple-600 rounded-lg">👨‍⚕️ {d.userId?.name || 'Doctor'}</span>
-                ))}
-              </div>
-            )}
+      {/* ── Empty State ── */}
+      {items.length === 0 && !showServiceForm && !editItem && (
+        <div className="text-center py-10 px-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-3">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#2B3EE6" strokeWidth="1.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
           </div>
-        ))}
-      </div>
+          <p className="text-sm font-semibold text-gray-600">No services yet</p>
+          <p className="text-xs text-gray-400 mt-1">Click "Add New Service" to get started</p>
+        </div>
+      )}
     </div>
   );
 
@@ -296,13 +531,20 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
       <div className="space-y-2">
         {items.length === 0 && <p className="text-xs text-gray-300 text-center py-6">No {tab} added yet</p>}
         {items.map((item) => (
-          <div key={item._id} className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-xl">
-            <div>
-              {tab === 'doctors' && <p className="text-sm font-medium text-gray-700">{item.userId?.name || 'Unknown'} <span className="text-xs text-gray-400 ml-1">{item.specialization}</span></p>}
-              {tab === 'ambulances' && <p className="text-sm font-medium text-gray-700">{item.ambulanceName} <span className="text-xs text-gray-400 ml-1">{item.vehicleNumber}</span></p>}
+          <div key={item._id} className="bg-gray-50 rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div>
+                {tab === 'doctors' && <p className="text-sm font-medium text-gray-700">{item.userId?.name || 'Unknown'} <span className="text-xs text-gray-400 ml-1">{item.specialization}</span></p>}
+                {tab === 'ambulances' && <p className="text-sm font-medium text-gray-700">{item.ambulanceName} <span className="text-xs text-gray-400 ml-1">{item.vehicleNumber}</span></p>}
+              </div>
+              <div className="flex items-center gap-2">
+                {tab === 'doctors' && (
+                  <ScheduleManager hospitalId={hospitalId} doctorId={item._id} doctorName={item.userId?.name || 'Doctor'} />
+                )}
+                <button onClick={() => handleRemove(item._id)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors">Remove</button>
+              </div>
             </div>
-            <button onClick={() => handleRemove(item._id)}
-              className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors">Remove</button>
           </div>
         ))}
       </div>

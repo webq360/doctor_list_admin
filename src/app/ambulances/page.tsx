@@ -107,14 +107,22 @@ export default function AmbulancesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this ambulance?')) return;
-    await api.delete(`/ambulance/${id}`);
-    setAmbulances((prev) => prev.filter((a) => a._id !== id));
+    try {
+      await api.delete(`/ambulance/${id}`);
+      setAmbulances((prev) => prev.filter((a) => a._id !== id));
+    } catch {
+      alert('Failed to delete. Please try again.');
+    }
   };
 
   const toggleStatus = async (a: Ambulance) => {
     const newStatus = a.status === 'inactive' ? 'available' : 'inactive';
-    await api.patch(`/ambulance/${a._id}/status`, { status: newStatus });
-    setAmbulances((prev) => prev.map((x) => x._id === a._id ? { ...x, status: newStatus as Ambulance['status'] } : x));
+    try {
+      await api.patch(`/ambulance/${a._id}/status`, { status: newStatus });
+      setAmbulances((prev) => prev.map((x) => x._id === a._id ? { ...x, status: newStatus as Ambulance['status'] } : x));
+    } catch {
+      alert('Failed to update status. Please try again.');
+    }
   };
 
   const set = (k: keyof typeof emptyForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -322,7 +330,7 @@ export default function AmbulancesPage() {
                               const f = e.target.files?.[0]; if (!f) return;
                               const fd = new FormData(); fd.append('image', f);
                               try {
-                                const { data } = await api.post('/upload/doctor', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                const { data } = await api.post('/upload/hospital', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
                                 setEditAmbulance((p: any) => ({ ...p, [key]: data.url }));
                               } catch { setEditAmbulance((p: any) => ({ ...p, [key]: URL.createObjectURL(f) })); }
                             }} />
@@ -350,7 +358,7 @@ export default function AmbulancesPage() {
                                 const f = e.target.files?.[0]; if (!f) return;
                                 const fd = new FormData(); fd.append('image', f);
                                 try {
-                                  const { data } = await api.post('/upload/doctor', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                  const { data } = await api.post('/upload/hospital', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
                                   setEditAmbulance((p: any) => ({ ...p, documents: { ...p.documents, [docKey]: data.url } }));
                                 } catch { setEditAmbulance((p: any) => ({ ...p, documents: { ...p.documents, [docKey]: URL.createObjectURL(f) } })); }
                               }} />

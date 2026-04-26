@@ -12,8 +12,12 @@ export default function UsersPage() {
   }, []);
 
   const toggleActive = async (id: string, isActive: boolean) => {
-    await api.put(`/users/${id}`, { isActive: !isActive });
-    setUsers((prev) => prev.map((u) => (u._id === id ? { ...u, isActive: !isActive } : u)));
+    try {
+      await api.put(`/users/${id}`, { isActive: !isActive });
+      setUsers((prev) => prev.map((u) => (u._id === id ? { ...u, isActive: !isActive } : u)));
+    } catch {
+      alert('Failed to update user status. Please try again.');
+    }
   };
 
   return (
