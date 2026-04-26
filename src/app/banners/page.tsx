@@ -337,7 +337,7 @@ export default function BannersPage() {
 
       {/* ══ Add Modal ══ */}
       {showAdd && (
-        <Modal title={`Add ${TABS.find((t) => t.key === activeTab)?.label} Banner`} onClose={() => setShowAdd(false)}>
+        <Modal title={`Add ${TABS?.find((t) => t.key === activeTab)?.label || 'Banner'} Banner`} onClose={() => setShowAdd(false)}>
           <form onSubmit={handleAdd} className="space-y-4">
             {addError && <p className="text-xs text-red-500 bg-red-50 px-4 py-2.5 rounded-xl">{addError}</p>}
             <ImageUpload preview={addImagePreview} fileRef={addFileRef}

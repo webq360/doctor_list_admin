@@ -318,7 +318,7 @@ export default function DoctorsPage() {
                     <div className="col-span-2"><label className={labelCls}>Select Hospital</label>
                       <select value={form.hospitalId} onChange={(e) => {
                         const hid = e.target.value;
-                        const hospital = hospitals.find((h) => h._id === hid);
+                        const hospital = hospitals?.find((h) => h._id === hid);
                         setForm((p) => ({
                           ...p,
                           hospitalId: hid,
@@ -328,7 +328,7 @@ export default function DoctorsPage() {
                         }));
                       }} className={`${inputCls} text-gray-700`}>
                         <option value="">Select Hospital</option>
-                        {hospitals.map((h) => <option key={h._id} value={h._id}>{h.name}</option>)}
+                        {hospitals?.map((h) => <option key={h._id} value={h._id}>{h.name}</option>)}
                       </select>
                     </div>
                   </div>
@@ -543,14 +543,14 @@ export default function DoctorsPage() {
                       <select value={editDoctor.hospitalId?._id || editDoctor.hospitalId || ''}
                         onChange={(e) => {
                           const hid = e.target.value;
-                          const hospital = hospitals.find((h) => h._id === hid);
+                          const hospital = hospitals?.find((h) => h._id === hid);
                           setEditDoctor((p: any) => ({ ...p, hospitalId: hid,
                             location: hospital ? { division: (hospital as any).division, district: (hospital as any).district, upazila: (hospital as any).upazila } : p.location
                           }));
                         }}
                         className={`${inputCls} text-gray-700`}>
                         <option value="">Select Hospital</option>
-                        {hospitals.map((h) => <option key={h._id} value={h._id}>{h.name}</option>)}
+                        {hospitals?.map((h) => <option key={h._id} value={h._id}>{h.name}</option>)}
                       </select>
                     </div>
                   </div>

@@ -53,9 +53,9 @@ function ScheduleManager({ hospitalId, doctorId, doctorName }: { hospitalId: str
 
   const toggleDay = (day: string) => {
     setSchedule((p) => {
-      const exists = p.find((s) => s.day === day);
+      const exists = p?.find((s) => s.day === day);
       if (exists) return p.filter((s) => s.day !== day);
-      return [...p, { day, startTime: '09:00', endTime: '17:00' }];
+      return [...(p || []), { day, startTime: '09:00', endTime: '17:00' }];
     });
   };
 
@@ -94,7 +94,7 @@ function ScheduleManager({ hospitalId, doctorId, doctorName }: { hospitalId: str
               <div className="px-6 py-5 space-y-3">
                 <p className="text-xs text-gray-500">Select days and set appointment hours. Patients will see these times when booking at this hospital.</p>
                 {DAYS.map((day) => {
-                  const entry = schedule.find((s) => s.day === day);
+                  const entry = schedule?.find((s) => s.day === day);
                   const active = !!entry;
                   return (
                     <div key={day} className={`rounded-xl border transition-colors ${active ? 'border-blue-200 bg-blue-50' : 'border-gray-100 bg-gray-50'}`}>
@@ -173,7 +173,7 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
       setItems(r.data);
       // Load existing ourService text from first service that has it
       if (t === 'services' && Array.isArray(r.data)) {
-        const existing = r.data.find((s: any) => s.ourService?.trim());
+        const existing = Array.isArray(r.data) ? r.data.find((s: any) => s.ourService?.trim()) : undefined;
         if (existing) setOurServicesText(existing.ourService);
       }
     }).catch(() => setItems([]));

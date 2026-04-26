@@ -234,7 +234,7 @@ export default function NotificationsPage() {
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="text-sm font-semibold text-gray-800 truncate">{n.title}</h3>
                             <span className={`shrink-0 px-2 py-0.5 rounded-lg text-xs font-medium ${roleBadge(n.targetRole)}`}>
-                              {ROLES.find((r) => r.value === n.targetRole)?.label || n.targetRole}
+                              {Array.isArray(ROLES) ? ROLES.find((r) => r.value === n.targetRole)?.label || n.targetRole : n.targetRole}
                             </span>
                           </div>
                           <p className="text-xs text-gray-500 line-clamp-2">{n.body}</p>
