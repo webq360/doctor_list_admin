@@ -7,8 +7,10 @@ const api = axios.create({ baseURL: API_BASE_URL });
 api.interceptors.request.use((config) => {
   const token = Cookies.get('token');
   if (token) {
-    config.headers = config.headers ? config.headers : {};
-    (config.headers as any).Authorization = `Bearer ${token}`;
+    if (!config.headers) {
+      config.headers = new axios.AxiosHeaders();
+    }
+    config.headers.set('Authorization', `Bearer ${token}`);
   }
   return config;
 });
