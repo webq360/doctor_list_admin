@@ -31,6 +31,7 @@ export interface AmbulanceBid {
 export interface Doctor {
   _id: string;
   userId: User;
+  bmdcNumber: string;
   specialization?: string;
   specializations: string[];
   experience: number;
@@ -38,6 +39,7 @@ export interface Doctor {
   bio: string;
   isApproved: boolean;
   hospitalId?: Hospital;
+  hospitalIds?: Hospital[];
   profileImage?: string;
   location?: { division?: string; district?: string; upazila?: string };
   schedule: { day: string; startTime: string; endTime: string }[];
