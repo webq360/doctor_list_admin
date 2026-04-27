@@ -52,7 +52,8 @@ export interface Doctor {
   hospitalIds?: Hospital[];
   profileImage?: string;
   location?: { division?: string; district?: string; upazila?: string };
-  schedule: { day: string; startTime: string; endTime: string }[];
+  schedule: { day: string; startTime?: string; endTime?: string; shifts?: Array<{ shift: string; startTime: string; endTime: string }> }[];
+  hospitalSchedules?: Array<{ hospitalId: string | Hospital; schedule: { day: string; startTime?: string; endTime?: string; shifts?: Array<{ shift: string; startTime: string; endTime: string }> }[] }>;
 }
 
 export interface Hospital {
@@ -85,10 +86,17 @@ export interface Appointment {
   _id: string;
   patientId: User;
   doctorId: Doctor;
+  hospitalId?: Hospital;
   date: string;
   time: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   notes: string;
+  appointmentFor?: 'self' | 'other';
+  appointmentForName?: string;
+  appointmentForPhone?: string;
+  appointmentForAge?: number;
+  serialNumber?: string;
+  statusChangeMessage?: string;
 }
 
 export interface Ambulance {

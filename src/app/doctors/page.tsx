@@ -403,7 +403,7 @@ export default function DoctorsPage() {
                       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
                       View
                     </button>
-                    <button onClick={() => setEditDoctor({ ...d, specializations: d.specializations || [] })}
+                    <button onClick={() => setEditDoctor({ ...d, specializations: d.specializations || [], departmentIds: d.departments?.map((dept: any) => typeof dept === 'string' ? dept : dept._id) || [] })}
                       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors">
                       Edit
                     </button>
@@ -865,6 +865,24 @@ export default function DoctorsPage() {
                   </div>
                 </div>
 
+                {/* Departments */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Departments</p>
+                  <div className="min-h-[50px] border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
+                    {viewDoctor.departments?.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {viewDoctor.departments.map((dept, i) => (
+                          <span key={i} className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg text-xs font-medium">
+                            {dept.title}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No departments assigned</p>
+                    )}
+                  </div>
+                </div>
+
                 {/* About */}
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor</p>
@@ -880,7 +898,7 @@ export default function DoctorsPage() {
                   <button 
                     onClick={() => {
                       setViewDoctor(null);
-                      setEditDoctor({ ...viewDoctor, specializations: viewDoctor.specializations || [] });
+                      setEditDoctor({ ...viewDoctor, specializations: viewDoctor.specializations || [], departmentIds: viewDoctor.departments?.map((dept: any) => typeof dept === 'string' ? dept : dept._id) || [] });
                     }}
                     className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90" 
                     style={{ background: '#2B3EE6' }}
@@ -1094,6 +1112,63 @@ export default function DoctorsPage() {
                               <button 
                                 type="button"
                                 onClick={() => setEditDoctor((p: any) => ({ ...p, hospitalIds: (p.hospitalIds || []).filter((id: any) => (typeof id === 'string' ? id : id._id) !== hospitalId) }))}
+                                className="hover:text-red-500 ml-1"
+                              >×</button>
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Department Selection */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Department Assignment</p>
+                  
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3">
+                    {departments.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-4">No departments available</p>
+                    ) : (
+                      departments.map((dept) => (
+                        <label key={dept._id} className="flex items-start gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded-lg">
+                          <input 
+                            type="checkbox" 
+                            checked={(editDoctor.departmentIds || []).some((dId: any) => (typeof dId === 'string' ? dId : dId._id) === dept._id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditDoctor((p: any) => ({ ...p, departmentIds: [...(p.departmentIds || []), dept._id] }));
+                              } else {
+                                setEditDoctor((p: any) => ({ ...p, departmentIds: (p.departmentIds || []).filter((dId: any) => (typeof dId === 'string' ? dId : dId._id) !== dept._id) }));
+                              }
+                            }}
+                            className="w-4 h-4 rounded accent-blue-600 mt-0.5" 
+                          />
+                          <div className="flex-1">
+                            <span className="text-sm text-gray-700 font-medium">{dept.title}</span>
+                            {dept.description && (
+                              <p className="text-xs text-gray-400">{dept.description}</p>
+                            )}
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  
+                  {/* Selected Departments */}
+                  {(editDoctor.departmentIds || []).length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-gray-500 mb-2">Selected Departments ({(editDoctor.departmentIds || []).length})</p>
+                      <div className="flex flex-wrap gap-1">
+                        {(editDoctor.departmentIds || []).map((dId: any) => {
+                          const departmentId = typeof dId === 'string' ? dId : dId._id;
+                          const department = departments?.find(d => d._id === departmentId);
+                          return department ? (
+                            <span key={departmentId} className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-600 rounded text-xs">
+                              {department.title}
+                              <button 
+                                type="button"
+                                onClick={() => setEditDoctor((p: any) => ({ ...p, departmentIds: (p.departmentIds || []).filter((id: any) => (typeof id === 'string' ? id : id._id) !== departmentId) }))}
                                 className="hover:text-red-500 ml-1"
                               >×</button>
                             </span>
