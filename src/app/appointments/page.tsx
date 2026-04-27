@@ -455,9 +455,51 @@ export default function AppointmentsPage() {
                 {/* Hospital */}
                 {(viewAppointment as any).hospitalId && (
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Hospital</label>
-                    <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
-                      {(viewAppointment as any).hospitalId?.name}
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Hospital Information</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Hospital Name</label>
+                        <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700 font-medium">
+                          {(viewAppointment as any).hospitalId?.name}
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Address</label>
+                        <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
+                          {(viewAppointment as any).hospitalId?.address || '—'}
+                        </div>
+                      </div>
+                      {(viewAppointment as any).hospitalId?.contactPersons && (viewAppointment as any).hospitalId.contactPersons.length > 0 ? (
+                        (viewAppointment as any).hospitalId.contactPersons.map((contact: any, idx: number) => (
+                          <div key={idx} className="col-span-2 p-3 bg-green-50 rounded-xl border border-green-100">
+                            <p className="text-xs font-semibold text-green-700 mb-2">Contact Person {idx + 1}</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <p className="text-xs text-green-600 font-medium">Name</p>
+                                <p className="text-sm text-green-900 font-medium">{contact.name}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-green-600 font-medium">Designation</p>
+                                <p className="text-sm text-green-900">{contact.designation}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-green-600 font-medium">Mobile</p>
+                                <p className="text-sm text-green-900 font-mono">{contact.mobile}</p>
+                              </div>
+                              {contact.whatsapp && (
+                                <div>
+                                  <p className="text-xs text-green-600 font-medium">WhatsApp</p>
+                                  <p className="text-sm text-green-900 font-mono">{contact.whatsapp}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                          <p className="text-sm text-gray-500">No contact persons available</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
