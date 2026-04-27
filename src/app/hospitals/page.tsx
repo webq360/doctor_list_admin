@@ -5,7 +5,22 @@ import api from '@/lib/api';
 import { Hospital } from '@/types';
 import { DIVISIONS, getDistricts, getUpazilas } from '@/lib/bd-locations';
 
-const emptyForm = { name: '', contact: '', address: '', division: '', district: '', upazila: '', lat: '', lng: '' };
+const emptyForm = { 
+  name: '', 
+  address: '', 
+  division: '', 
+  district: '', 
+  upazila: '', 
+  lat: '', 
+  lng: '' 
+};
+
+const emptyContactPerson = {
+  name: '',
+  designation: '',
+  mobile: '',
+  whatsapp: '',
+};
 
 function ImageUpload({ label, preview, onChange }: {
   label: string; preview: string;
@@ -36,31 +51,122 @@ const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm o
 const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
 
 const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const SHIFTS = ['Morning', 'Evening', 'Night'] as const;
+
+type Shift = typeof SHIFTS[number];
+
+interface ShiftSchedule {
+  shift: Shift;
+  startTime: string;
+  endTime: string;
+}
+
+interface DaySchedule {
+  day: string;
+  shifts: ShiftSchedule[];
+}
 
 // ── Schedule Manager for a doctor at a specific hospital ──
 function ScheduleManager({ hospitalId, doctorId, doctorName }: { hospitalId: string; doctorId: string; doctorName: string }) {
   const [open, setOpen] = useState(false);
-  const [schedule, setSchedule] = useState<{ day: string; startTime: string; endTime: string }[]>([]);
+  const [schedule, setSchedule] = useState<DaySchedule[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const load = async () => {
     try {
       const { data } = await api.get(`/hospitals/${hospitalId}/doctors/${doctorId}/schedule`);
-      setSchedule(data.schedule || []);
+      // Convert old format to new format if needed
+      if (data.schedule && Array.isArray(data.schedule)) {
+        const converted: DaySchedule[] = data.schedule.map((s: any) => {
+          if (s.shifts) {
+            // New format
+            return s as DaySchedule;
+          } else {
+            // Old format - convert to new
+            return {
+              day: s.day,
+              shifts: [{
+                shift: 'Morning' as Shift,
+                startTime: s.startTime || '09:00',
+                endTime: s.endTime || '17:00',
+              }]
+            };
+          }
+        });
+        setSchedule(converted);
+      } else {
+        setSchedule([]);
+      }
     } catch { setSchedule([]); }
   };
 
   const toggleDay = (day: string) => {
-    setSchedule((p) => {
-      const exists = p?.find((s) => s.day === day);
-      if (exists) return p.filter((s) => s.day !== day);
-      return [...(p || []), { day, startTime: '09:00', endTime: '17:00' }];
+    setSchedule((prev) => {
+      const exists = prev.find((s) => s.day === day);
+      if (exists) {
+        return prev.filter((s) => s.day !== day);
+      }
+      return [...prev, { 
+        day, 
+        shifts: [{ shift: 'Morning', startTime: '08:00', endTime: '12:00' }] 
+      }];
     });
   };
 
-  const updateTime = (day: string, field: 'startTime' | 'endTime', value: string) => {
-    setSchedule((p) => p.map((s) => s.day === day ? { ...s, [field]: value } : s));
+  const addShift = (day: string) => {
+    setSchedule((prev) => prev.map((s) => {
+      if (s.day !== day) return s;
+      
+      // Determine next shift to add
+      const existingShifts = s.shifts.map(sh => sh.shift);
+      let nextShift: Shift = 'Morning';
+      let defaultStart = '08:00';
+      let defaultEnd = '12:00';
+      
+      if (!existingShifts.includes('Morning')) {
+        nextShift = 'Morning';
+        defaultStart = '08:00';
+        defaultEnd = '12:00';
+      } else if (!existingShifts.includes('Evening')) {
+        nextShift = 'Evening';
+        defaultStart = '16:00';
+        defaultEnd = '20:00';
+      } else if (!existingShifts.includes('Night')) {
+        nextShift = 'Night';
+        defaultStart = '20:00';
+        defaultEnd = '00:00';
+      } else {
+        return s; // All shifts added
+      }
+      
+      return {
+        ...s,
+        shifts: [...s.shifts, { shift: nextShift, startTime: defaultStart, endTime: defaultEnd }]
+      };
+    }));
+  };
+
+  const removeShift = (day: string, shiftIndex: number) => {
+    setSchedule((prev) => prev.map((s) => {
+      if (s.day !== day) return s;
+      return {
+        ...s,
+        shifts: s.shifts.filter((_, idx) => idx !== shiftIndex)
+      };
+    }));
+  };
+
+  const updateShift = (day: string, shiftIndex: number, field: 'startTime' | 'endTime', value: string) => {
+    setSchedule((prev) => prev.map((s) => {
+      if (s.day !== day) return s;
+      return {
+        ...s,
+        shifts: s.shifts.map((sh, idx) => 
+          idx === shiftIndex ? { ...sh, [field]: value } : sh
+        )
+      };
+    }));
   };
 
   const handleSave = async () => {
@@ -92,30 +198,73 @@ function ScheduleManager({ hospitalId, doctorId, doctorName }: { hospitalId: str
                 </button>
               </div>
               <div className="px-6 py-5 space-y-3">
-                <p className="text-xs text-gray-500">Select days and set appointment hours. Patients will see these times when booking at this hospital.</p>
+                <p className="text-xs text-gray-500">Select days and add shifts (Morning, Evening, Night). Patients will see these times when booking.</p>
                 {DAYS.map((day) => {
-                  const entry = schedule?.find((s) => s.day === day);
-                  const active = !!entry;
+                  const daySchedule = schedule.find((s) => s.day === day);
+                  const active = !!daySchedule;
                   return (
                     <div key={day} className={`rounded-xl border transition-colors ${active ? 'border-blue-200 bg-blue-50' : 'border-gray-100 bg-gray-50'}`}>
-                      <div className="flex items-center gap-3 px-4 py-3">
+                      {/* Day Header */}
+                      <div className="flex items-center gap-3 px-4 py-3 border-b border-blue-100">
                         <button type="button" onClick={() => toggleDay(day)}
                           className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors ${active ? 'bg-blue-500' : 'border border-gray-300 bg-white'}`}>
                           {active && <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                         </button>
                         <span className={`text-sm font-medium flex-1 ${active ? 'text-blue-800' : 'text-gray-500'}`}>{day}</span>
-                        {active && (
-                          <div className="flex items-center gap-2">
-                            <input type="time" value={entry.startTime}
-                              onChange={(e) => updateTime(day, 'startTime', e.target.value)}
-                              className="text-xs border border-blue-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400 bg-white" />
-                            <span className="text-xs text-gray-400">to</span>
-                            <input type="time" value={entry.endTime}
-                              onChange={(e) => updateTime(day, 'endTime', e.target.value)}
-                              className="text-xs border border-blue-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400 bg-white" />
-                          </div>
+                        {active && daySchedule.shifts.length < 3 && (
+                          <button
+                            type="button"
+                            onClick={() => addShift(day)}
+                            className="text-xs px-2 py-1 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center gap-1">
+                            <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Shift
+                          </button>
                         )}
                       </div>
+                      
+                      {/* Shifts */}
+                      {active && daySchedule.shifts.length > 0 && (
+                        <div className="p-3 space-y-2">
+                          {daySchedule.shifts.map((shift, idx) => (
+                            <div key={idx} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-blue-100">
+                              <div className="flex-shrink-0">
+                                <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                  shift.shift === 'Morning' ? 'bg-yellow-100 text-yellow-700' :
+                                  shift.shift === 'Evening' ? 'bg-orange-100 text-orange-700' :
+                                  'bg-indigo-100 text-indigo-700'
+                                }`}>
+                                  {shift.shift === 'Morning' ? '🌅' : shift.shift === 'Evening' ? '🌆' : '🌙'} {shift.shift}
+                                </span>
+                              </div>
+                              <input 
+                                type="time" 
+                                value={shift.startTime}
+                                onChange={(e) => updateShift(day, idx, 'startTime', e.target.value)}
+                                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400 bg-white w-24" 
+                              />
+                              <span className="text-xs text-gray-400">to</span>
+                              <input 
+                                type="time" 
+                                value={shift.endTime}
+                                onChange={(e) => updateShift(day, idx, 'endTime', e.target.value)}
+                                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400 bg-white w-24" 
+                              />
+                              {daySchedule.shifts.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeShift(day, idx)}
+                                  className="ml-auto text-red-500 hover:bg-red-50 rounded p-1 transition-colors">
+                                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -195,19 +344,16 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
     if (!ourServicesText.trim()) return;
     setOurServicesSaving(true);
     try {
-      // Save ourService text to all existing services, or create a placeholder if none exist
+      // Save ourService text separately - not to individual services
+      // We'll store it in the first service or create a special entry
       if (items.length > 0) {
-        await Promise.all(
-          items.map((item) =>
-            api.put(`/hospitals/${hospitalId}/services/${item._id}`, {
-              name: item.name,
-              about: item.about,
-              ourService: ourServicesText,
-              serviceImageUrl: item.serviceImageUrl,
-            })
-          )
-        );
-        fetchItems(hospitalId, tab);
+        // Update only the first service with ourService text
+        await api.put(`/hospitals/${hospitalId}/services/${items[0]._id}`, {
+          name: items[0].name,
+          about: items[0].about,
+          ourService: ourServicesText,
+          serviceImageUrl: items[0].serviceImageUrl,
+        });
       }
       setOurServicesSaved(true);
       setTimeout(() => setOurServicesSaved(false), 2500);
@@ -217,7 +363,10 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
 
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!svcForm.name.trim()) return setSvcError('Service title is required');
+    // Title and description are now optional
+    if (!svcForm.name.trim() && !svcForm.about.trim() && !serviceImageFile) {
+      return setSvcError('Please provide at least a title, description, or image');
+    }
     setSvcError(''); setSvcSaving(true);
     try {
       let serviceImageUrl;
@@ -227,9 +376,9 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
         serviceImageUrl = data.url;
       }
       await api.post(`/hospitals/${hospitalId}/services`, {
-        name: svcForm.name,
+        name: svcForm.name || 'Untitled Service',
         about: svcForm.about || undefined,
-        ourService: ourServicesText || undefined,
+        ourService: undefined, // Don't save ourService text to individual services
         serviceImageUrl,
       });
       setSvcForm(emptyServiceForm);
@@ -242,7 +391,10 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
 
   const handleUpdateService = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editForm.name.trim()) return setEditError('Service title is required');
+    // Title and description are now optional
+    if (!editForm.name.trim() && !editForm.about.trim() && !editImageFile && !editItem.serviceImageUrl) {
+      return setEditError('Please provide at least a title, description, or image');
+    }
     setEditError(''); setEditSaving(true);
     try {
       let serviceImageUrl = editItem.serviceImageUrl;
@@ -252,9 +404,9 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
         serviceImageUrl = data.url;
       }
       await api.put(`/hospitals/${hospitalId}/services/${editItem._id}`, {
-        name: editForm.name,
+        name: editForm.name || 'Untitled Service',
         about: editForm.about || undefined,
-        ourService: ourServicesText || editItem.ourService || undefined,
+        ourService: editItem._id === items[0]?._id ? ourServicesText : undefined, // Only save ourService to first service
         serviceImageUrl,
       });
       setEditItem(null); setEditForm(emptyEditForm);
@@ -343,7 +495,7 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
           <form onSubmit={handleAddService} className="p-5 space-y-4">
             {svcError && <p className="text-xs text-red-500 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{svcError}</p>}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service Title <span className="text-red-400">*</span></label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service Title</label>
               <input placeholder="e.g. X-Ray, Cardiology, MRI..."
                 value={svcForm.name} onChange={(e) => setSvcForm((p) => ({ ...p, name: e.target.value }))}
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors" />
@@ -404,7 +556,7 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
           <form onSubmit={handleUpdateService} className="p-5 space-y-4">
             {editError && <p className="text-xs text-red-500 bg-red-50 border border-red-100 px-3 py-2 rounded-xl">{editError}</p>}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service Title <span className="text-red-400">*</span></label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service Title</label>
               <input placeholder="e.g. X-Ray, Cardiology, MRI..."
                 value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors" />
@@ -484,9 +636,9 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
                   </button>
                 </div>
               </div>
-              {(item.about || item.ourService) && (
+              {item.about && (
                 <div className="px-4 py-3 border-b border-gray-50">
-                  <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{item.ourService || item.about}</p>
+                  <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{item.about}</p>
                 </div>
               )}
               {item.serviceImageUrl && (
@@ -561,17 +713,25 @@ export default function HospitalsPage() {
   const [editLogoPreview, setEditLogoPreview] = useState('');
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
   const [editCoverPreview, setEditCoverPreview] = useState('');
-  const [viewTab, setViewTab] = useState<'doctors' | 'ambulances' | 'services'>('doctors');
+  const [viewTab, setViewTab] = useState<'details' | 'doctors' | 'ambulances' | 'services'>('details');
   const [form, setForm] = useState(emptyForm);
+  const [contactPersons, setContactPersons] = useState<typeof emptyContactPerson[]>([{ ...emptyContactPerson }]);
+  const [editContactPersons, setEditContactPersons] = useState<typeof emptyContactPerson[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState('');
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Search & Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterDivision, setFilterDivision] = useState('');
+  const [filterDistrict, setFilterDistrict] = useState('');
+  const [filterUpazila, setFilterUpazila] = useState('');
 
   useEffect(() => {
-    api.get('/hospitals').then((r) => setHospitals(r.data)).catch(() => {});
+    api.get('/hospitals?includeInactive=true').then((r) => setHospitals(r.data)).catch(() => {});
   }, []);
 
   const set = (k: keyof typeof emptyForm) =>
@@ -588,6 +748,14 @@ export default function HospitalsPage() {
     setLoading(true);
     setError('');
     try {
+      // Validate at least one contact person
+      const validContacts = contactPersons.filter(cp => cp.name.trim() && cp.designation.trim() && cp.mobile.trim());
+      if (validContacts.length === 0) {
+        setError('At least one contact person is required');
+        setLoading(false);
+        return;
+      }
+
       let logoUrl, coverUrl;
       if (logoFile) {
         try {
@@ -604,16 +772,20 @@ export default function HospitalsPage() {
         } catch { /* skip image upload if fails */ }
       }
       const { data } = await api.post('/hospitals', {
-        name: form.name, contact: form.contact, address: form.address,
+        name: form.name, 
+        address: form.address,
         division: form.division || undefined,
         district: form.district || undefined,
         upazila: form.upazila || undefined,
         location: form.lat && form.lng ? { lat: Number(form.lat), lng: Number(form.lng) } : undefined,
-        logo: logoUrl, coverImage: coverUrl,
+        contactPersons: validContacts,
+        logo: logoUrl, 
+        coverImage: coverUrl,
       });
       setHospitals((prev) => [...prev, data]);
       setShowModal(false);
       setForm(emptyForm);
+      setContactPersons([{ ...emptyContactPerson }]);
       setLogoFile(null); setLogoPreview('');
       setCoverFile(null); setCoverPreview('');
     } catch (err: any) {
@@ -629,11 +801,39 @@ export default function HospitalsPage() {
     setHospitals((prev) => prev.filter((h) => h._id !== id));
   };
 
+  const toggleStatus = async (id: string) => {
+    try {
+      const { data } = await api.patch(`/hospitals/${id}/toggle-status`);
+      setHospitals((prev) => prev.map((h) => h._id === id ? data : h));
+    } catch (err: any) {
+      console.error('Toggle status error:', err.response?.data || err.message);
+      alert(`Failed to toggle status: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  const toggleShowInHome = async (id: string) => {
+    try {
+      const { data } = await api.patch(`/hospitals/${id}/toggle-show-in-home`);
+      setHospitals((prev) => prev.map((h) => h._id === id ? data : h));
+    } catch (err: any) {
+      console.error('Toggle show in home error:', err.response?.data || err.message);
+      alert(`Failed to toggle: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
+      // Validate at least one contact person
+      const validContacts = editContactPersons.filter(cp => cp.name.trim() && cp.designation.trim() && cp.mobile.trim());
+      if (validContacts.length === 0) {
+        setError('At least one contact person is required');
+        setLoading(false);
+        return;
+      }
+
       let logoUrl = editHospital.logo;
       let coverUrl = editHospital.coverImage;
       if (editLogoFile) {
@@ -652,16 +852,17 @@ export default function HospitalsPage() {
       }
       const { data } = await api.put(`/hospitals/${editHospital._id}`, {
         name: editHospital.name,
-        contact: editHospital.contact,
         address: editHospital.address,
         division: editHospital.division,
         district: editHospital.district,
         upazila: editHospital.upazila,
+        contactPersons: validContacts,
         logo: logoUrl,
         coverImage: coverUrl,
       });
       setHospitals((prev) => prev.map((h) => h._id === data._id ? data : h));
       setEditHospital(null);
+      setEditContactPersons([]);
       setEditLogoFile(null); setEditLogoPreview('');
       setEditCoverFile(null); setEditCoverPreview('');
     } catch (err: any) {
@@ -673,8 +874,50 @@ export default function HospitalsPage() {
 
   const openModal = () => {
     setShowModal(true); setError(''); setForm(emptyForm);
+    setContactPersons([{ ...emptyContactPerson }]);
     setLogoFile(null); setLogoPreview('');
     setCoverFile(null); setCoverPreview('');
+  };
+
+  // Filter hospitals based on search and location
+  const filteredHospitals = hospitals.filter((h) => {
+    const matchesSearch = !searchQuery || h.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesDivision = !filterDivision || (h as any).division === filterDivision;
+    const matchesDistrict = !filterDistrict || (h as any).district === filterDistrict;
+    const matchesUpazila = !filterUpazila || (h as any).upazila === filterUpazila;
+    return matchesSearch && matchesDivision && matchesDistrict && matchesUpazila;
+  });
+
+  const addContactPerson = () => {
+    setContactPersons([...contactPersons, { ...emptyContactPerson }]);
+  };
+
+  const removeContactPerson = (index: number) => {
+    if (contactPersons.length > 1) {
+      setContactPersons(contactPersons.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateContactPerson = (index: number, field: keyof typeof emptyContactPerson, value: string) => {
+    const updated = [...contactPersons];
+    updated[index] = { ...updated[index], [field]: value };
+    setContactPersons(updated);
+  };
+
+  const addEditContactPerson = () => {
+    setEditContactPersons([...editContactPersons, { ...emptyContactPerson }]);
+  };
+
+  const removeEditContactPerson = (index: number) => {
+    if (editContactPersons.length > 1) {
+      setEditContactPersons(editContactPersons.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateEditContactPerson = (index: number, field: keyof typeof emptyContactPerson, value: string) => {
+    const updated = [...editContactPersons];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditContactPersons(updated);
   };
 
   const addBtn = (
@@ -691,10 +934,10 @@ export default function HospitalsPage() {
   return (
     <AdminLayout title="Hospital" action={addBtn}>
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6" suppressHydrationWarning>
         {[
           { label: 'Total Hospitals', value: hospitals.length, color: 'bg-blue-50 text-blue-600', icon: '🏥' },
-          { label: 'With Contact', value: hospitals.filter((h) => h.contact).length, color: 'bg-green-50 text-green-600', icon: '📞' },
+          { label: 'With Contact', value: hospitals.filter((h) => (h as any).contactMobile).length, color: 'bg-green-50 text-green-600', icon: '📞' },
           { label: 'With Address', value: hospitals.filter((h) => h.address).length, color: 'bg-orange-50 text-orange-500', icon: '📍' },
         ].map((s) => (
           <div key={s.label} className={`rounded-2xl p-5 flex items-center gap-4 ${s.color}`}>
@@ -707,21 +950,104 @@ export default function HospitalsPage() {
         ))}
       </div>
 
+      {/* Search & Filter */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-4" suppressHydrationWarning>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          {/* Search */}
+          <div className="md:col-span-1">
+            <input
+              type="text"
+              placeholder="Search hospital name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors"
+            />
+          </div>
+          
+          {/* Division Filter */}
+          <div>
+            <select
+              value={filterDivision}
+              onChange={(e) => {
+                setFilterDivision(e.target.value);
+                setFilterDistrict('');
+                setFilterUpazila('');
+              }}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors text-gray-700"
+            >
+              <option value="">All Divisions</option>
+              {DIVISIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+          
+          {/* District Filter */}
+          <div>
+            <select
+              value={filterDistrict}
+              onChange={(e) => {
+                setFilterDistrict(e.target.value);
+                setFilterUpazila('');
+              }}
+              disabled={!filterDivision}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <option value="">All Districts</option>
+              {getDistricts(filterDivision).map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+          
+          {/* Upazila Filter */}
+          <div>
+            <select
+              value={filterUpazila}
+              onChange={(e) => setFilterUpazila(e.target.value)}
+              disabled={!filterDistrict}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <option value="">All Upazilas</option>
+              {getUpazilas(filterDivision, filterDistrict).map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </div>
+        </div>
+        
+        {/* Clear Filters */}
+        {(searchQuery || filterDivision || filterDistrict || filterUpazila) && (
+          <div className="mt-3 flex items-center justify-between" suppressHydrationWarning>
+            <p className="text-xs text-gray-500">
+              Showing {filteredHospitals.length} of {hospitals.length} hospitals
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setFilterDivision('');
+                setFilterDistrict('');
+                setFilterUpazila('');
+              }}
+              className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors font-medium"
+            >
+              Clear All Filters
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Hospital List */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
-              {['', 'Name', 'Contact', 'Address', 'Action'].map((h) => (
+              {['', 'Name', 'Location', 'Contact Person', 'Mobile', 'Status', 'Show in Home', 'Action'].map((h) => (
                 <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {hospitals.length === 0 && (
-              <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-300 text-sm">No hospitals found</td></tr>
+            {filteredHospitals.length === 0 && (
+              <tr><td colSpan={8} className="px-5 py-10 text-center text-gray-300 text-sm">
+                {hospitals.length === 0 ? 'No hospitals found' : 'No hospitals match your filters'}
+              </td></tr>
             )}
-            {hospitals.map((h) => (
+            {filteredHospitals.map((h) => (
               <tr key={h._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                 <td className="px-5 py-3.5">
                   {(h as any).logo
@@ -729,15 +1055,86 @@ export default function HospitalsPage() {
                     : <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-400 text-sm font-bold">{h.name?.[0]}</div>}
                 </td>
                 <td className="px-5 py-3.5 font-medium text-gray-700">{h.name}</td>
-                <td className="px-5 py-3.5 text-gray-500">{h.contact}</td>
-                <td className="px-5 py-3.5 text-gray-500">{h.address}</td>
+                <td className="px-5 py-3.5 text-gray-500">
+                  {[h.division, h.district, h.upazila].filter(Boolean).join(', ') || '-'}
+                </td>
+                <td className="px-5 py-3.5 text-gray-500">
+                  {(h as any).contactPersons && (h as any).contactPersons.length > 0 ? (
+                    <div className="space-y-1">
+                      {(h as any).contactPersons.slice(0, 2).map((cp: any, idx: number) => (
+                        <div key={idx} className="text-xs">
+                          <span className="font-medium">{cp.name}</span>
+                          {(h as any).contactPersons.length > 2 && idx === 1 && (
+                            <span className="text-gray-400 ml-1">+{(h as any).contactPersons.length - 2} more</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (h as any).contactPersonName || '-'}
+                </td>
+                <td className="px-5 py-3.5 text-gray-500">
+                  {(h as any).contactPersons && (h as any).contactPersons.length > 0 
+                    ? (h as any).contactPersons[0].mobile 
+                    : (h as any).contactMobile || '-'}
+                </td>
+                <td className="px-5 py-3.5">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${
+                    h.status === 'paused' 
+                      ? 'bg-gray-100 text-gray-600' 
+                      : 'bg-green-50 text-green-600'
+                  }`}>
+                    {h.status === 'paused' ? '⏸ Paused' : '✓ Active'}
+                  </span>
+                </td>
+                <td className="px-5 py-3.5">
+                  <button
+                    onClick={() => toggleShowInHome(h._id)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      h.showInHome ? 'bg-blue-500' : 'bg-gray-200'
+                    }`}
+                    title={h.showInHome ? 'Showing in home page' : 'Hidden from home page'}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        h.showInHome ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => { setViewTab('doctors'); setViewHospital(h); }}
+                    <button onClick={() => { setViewTab('details'); setViewHospital(h); }}
                       className="text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
                       View
                     </button>
-                    <button onClick={() => { setEditHospital({ ...h, division: (h as any).division || '', district: (h as any).district || '', upazila: (h as any).upazila || '' }); setEditLogoFile(null); setEditLogoPreview(''); setEditCoverFile(null); setEditCoverPreview(''); }}
+                    <button 
+                      onClick={() => toggleStatus(h._id)}
+                      className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                        h.status === 'paused'
+                          ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}>
+                      {h.status === 'paused' ? 'Resume' : 'Pause'}
+                    </button>
+                    <button onClick={() => { 
+                      const contacts = (h as any).contactPersons && (h as any).contactPersons.length > 0 
+                        ? (h as any).contactPersons 
+                        : [{ 
+                            name: (h as any).contactPersonName || '', 
+                            designation: (h as any).contactPersonDesignation || '', 
+                            mobile: (h as any).contactMobile || '', 
+                            whatsapp: (h as any).contactWhatsapp || '' 
+                          }];
+                      setEditHospital({ 
+                        ...h, 
+                        division: (h as any).division || '', 
+                        district: (h as any).district || '', 
+                        upazila: (h as any).upazila || ''
+                      }); 
+                      setEditContactPersons(contacts.filter((c: any) => c.name || c.mobile));
+                      setEditLogoFile(null); setEditLogoPreview(''); 
+                      setEditCoverFile(null); setEditCoverPreview(''); 
+                    }}
                       className="text-xs font-medium px-3 py-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors">
                       Edit
                     </button>
@@ -806,19 +1203,85 @@ export default function HospitalsPage() {
                   </div>
                 </div>
 
-                {/* Row 3: Name, Contact */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelCls}>Hospital Name<span className="text-red-400 ml-0.5">*</span></label>
-                    <input placeholder="Hospital Name" value={form.name} onChange={set('name')} required className={inputCls} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Contact<span className="text-red-400 ml-0.5">*</span></label>
-                    <input placeholder="Phone / Email" value={form.contact} onChange={set('contact')} required className={inputCls} />
-                  </div>
+                {/* Row 3: Hospital Name */}
+                <div>
+                  <label className={labelCls}>Hospital Name<span className="text-red-400 ml-0.5">*</span></label>
+                  <input placeholder="Hospital Name" value={form.name} onChange={set('name')} required className={inputCls} />
                 </div>
 
-                {/* Row 4: Address, Lat/Lng */}
+                {/* Row 4: Contact Persons */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-semibold text-gray-700">Contact Persons <span className="text-red-400">*</span></label>
+                    <button
+                      type="button"
+                      onClick={addContactPerson}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+                      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Person
+                    </button>
+                  </div>
+                  
+                  {contactPersons.map((person, index) => (
+                    <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-gray-600">Contact Person #{index + 1}</span>
+                        {contactPersons.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeContactPerson(index)}
+                            className="text-xs px-2 py-1 rounded-lg text-red-500 hover:bg-red-50 transition-colors">
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelCls}>Name<span className="text-red-400 ml-0.5">*</span></label>
+                          <input
+                            placeholder="e.g. Dr. Ahmed"
+                            value={person.name}
+                            onChange={(e) => updateContactPerson(index, 'name', e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Designation<span className="text-red-400 ml-0.5">*</span></label>
+                          <input
+                            placeholder="e.g. Director, Manager"
+                            value={person.designation}
+                            onChange={(e) => updateContactPerson(index, 'designation', e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelCls}>Mobile Number<span className="text-red-400 ml-0.5">*</span></label>
+                          <input
+                            placeholder="01XXXXXXXXX"
+                            value={person.mobile}
+                            onChange={(e) => updateContactPerson(index, 'mobile', e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelCls}>WhatsApp Number</label>
+                          <input
+                            placeholder="01XXXXXXXXX (optional)"
+                            value={person.whatsapp}
+                            onChange={(e) => updateContactPerson(index, 'whatsapp', e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Row 5: Address, Lat/Lng */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Address<span className="text-red-400 ml-0.5">*</span></label>
@@ -875,7 +1338,7 @@ export default function HospitalsPage() {
 
               {/* Tabs */}
               <div className="flex gap-1 px-6 pt-4">
-                {(['doctors', 'ambulances', 'services'] as const).map((t) => (
+                {(['details', 'doctors', 'ambulances', 'services'] as const).map((t) => (
                   <button key={t} onClick={() => setViewTab(t)}
                     className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
                       viewTab === t ? 'text-white' : 'text-gray-500 hover:bg-gray-50'
@@ -887,7 +1350,117 @@ export default function HospitalsPage() {
               </div>
 
               <div className="px-6 py-4">
-                <HospitalTabContent hospitalId={String(viewHospital._id)} tab={viewTab} />
+                {viewTab === 'details' ? (
+                  <div className="space-y-4">
+                    {/* Cover Image */}
+                    {viewHospital.coverImage && (
+                      <div className="rounded-xl overflow-hidden">
+                        <img src={viewHospital.coverImage} alt="Cover" className="w-full h-48 object-cover" />
+                      </div>
+                    )}
+
+                    {/* Basic Info */}
+                    <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                      <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Basic Information
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Hospital Name</p>
+                          <p className="font-medium text-gray-800">{viewHospital.name}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Status</p>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${
+                            viewHospital.status === 'paused' 
+                              ? 'bg-gray-100 text-gray-600' 
+                              : 'bg-green-50 text-green-600'
+                          }`}>
+                            {viewHospital.status === 'paused' ? '⏸ Paused' : '✓ Active'}
+                          </span>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs text-gray-500 mb-1">Address</p>
+                          <p className="text-gray-700">{viewHospital.address}</p>
+                        </div>
+                        {viewHospital.division && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Division</p>
+                            <p className="text-gray-700">{viewHospital.division}</p>
+                          </div>
+                        )}
+                        {viewHospital.district && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">District</p>
+                            <p className="text-gray-700">{viewHospital.district}</p>
+                          </div>
+                        )}
+                        {viewHospital.upazila && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Upazila</p>
+                            <p className="text-gray-700">{viewHospital.upazila}</p>
+                          </div>
+                        )}
+                        {viewHospital.location?.lat && viewHospital.location?.lng && (
+                          <div className="col-span-2">
+                            <p className="text-xs text-gray-500 mb-1">Coordinates</p>
+                            <p className="text-gray-700 font-mono text-xs">
+                              {viewHospital.location.lat}, {viewHospital.location.lng}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Contact Persons */}
+                    <div className="bg-blue-50 rounded-xl p-4 space-y-3">
+                      <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Contact Persons
+                      </h3>
+                      {viewHospital.contactPersons && viewHospital.contactPersons.length > 0 ? (
+                        <div className="space-y-3">
+                          {viewHospital.contactPersons.map((cp: any, idx: number) => (
+                            <div key={idx} className="bg-white rounded-lg p-3 border border-blue-100">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <p className="font-semibold text-gray-800 text-sm">{cp.name}</p>
+                                  <p className="text-xs text-gray-500">{cp.designation}</p>
+                                </div>
+                                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">#{idx + 1}</span>
+                              </div>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex items-center gap-2 text-gray-700">
+                                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                  </svg>
+                                  <span>{cp.mobile}</span>
+                                </div>
+                                {cp.whatsapp && (
+                                  <div className="flex items-center gap-2 text-green-600">
+                                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                                    </svg>
+                                    <span>{cp.whatsapp}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">No contact persons added</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <HospitalTabContent hospitalId={String(viewHospital._id)} tab={viewTab} />
+                )}
               </div>
             </div>
           </div>
@@ -982,9 +1555,77 @@ export default function HospitalsPage() {
                     <input value={editHospital.name} onChange={(e) => setEditHospital((p: any) => ({ ...p, name: e.target.value }))} required className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>Contact<span className="text-red-400 ml-0.5">*</span></label>
-                    <input value={editHospital.contact} onChange={(e) => setEditHospital((p: any) => ({ ...p, contact: e.target.value }))} required className={inputCls} />
+                    <label className={labelCls}>Address<span className="text-red-400 ml-0.5">*</span></label>
+                    <input value={editHospital.address} onChange={(e) => setEditHospital((p: any) => ({ ...p, address: e.target.value }))} required className={inputCls} />
                   </div>
+                </div>
+
+                {/* Contact Persons */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-semibold text-gray-700">Contact Persons <span className="text-red-400">*</span></label>
+                    <button
+                      type="button"
+                      onClick={addEditContactPerson}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+                      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Person
+                    </button>
+                  </div>
+                  
+                  {editContactPersons.map((person, index) => (
+                    <div key={index} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-gray-600">Contact Person #{index + 1}</span>
+                        {editContactPersons.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeEditContactPerson(index)}
+                            className="text-xs px-2 py-1 rounded-lg text-red-500 hover:bg-red-50 transition-colors">
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelCls}>Name<span className="text-red-400 ml-0.5">*</span></label>
+                          <input
+                            value={person.name}
+                            onChange={(e) => updateEditContactPerson(index, 'name', e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Designation<span className="text-red-400 ml-0.5">*</span></label>
+                          <input
+                            value={person.designation}
+                            onChange={(e) => updateEditContactPerson(index, 'designation', e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelCls}>Mobile Number<span className="text-red-400 ml-0.5">*</span></label>
+                          <input
+                            value={person.mobile}
+                            onChange={(e) => updateEditContactPerson(index, 'mobile', e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelCls}>WhatsApp Number</label>
+                          <input
+                            value={person.whatsapp}
+                            onChange={(e) => updateEditContactPerson(index, 'whatsapp', e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 <div>
                   <label className={labelCls}>Address<span className="text-red-400 ml-0.5">*</span></label>

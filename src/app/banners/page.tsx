@@ -6,6 +6,7 @@ import { DIVISIONS, getDistricts, getUpazilas } from '@/lib/bd-locations';
 
 type BannerCategory =
   | 'home_slider'
+  | 'hospital_slider'
   | 'doctor_list'
   | 'ambulance'
   | 'hospital'
@@ -28,6 +29,7 @@ interface Banner {
 
 const TABS: { key: BannerCategory; label: string; icon: string }[] = [
   { key: 'home_slider',        label: 'Home Slider',    icon: '🏠' },
+  { key: 'hospital_slider',    label: 'Hospital Slider', icon: '🏥' },
   { key: 'doctor_list',        label: 'Doctor List',    icon: '🩺' },
   { key: 'ambulance',          label: 'Ambulance',      icon: '🚑' },
   { key: 'hospital',           label: 'Hospital',       icon: '🏥' },

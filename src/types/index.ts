@@ -51,7 +51,20 @@ export interface Hospital {
   district?: string;
   upazila?: string;
   location?: { lat: number; lng: number };
-  contact: string;
+  contactPersons?: Array<{
+    name: string;
+    designation: string;
+    mobile: string;
+    whatsapp?: string;
+  }>;
+  status?: 'active' | 'paused';
+  showInHome?: boolean;  // New field
+  // Legacy fields for backward compatibility
+  contactPersonName?: string;
+  contactPersonDesignation?: string;
+  contactMobile?: string;
+  contactWhatsapp?: string;
+  contact?: string;
   logo?: string;
   coverImage?: string;
 }
