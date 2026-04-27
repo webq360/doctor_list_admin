@@ -157,6 +157,22 @@ export default function Sidebar() {
           Doctor List
         </Link>
 
+        {/* Departments */}
+        <Link
+          href="/departments"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            pathname === '/departments' ? 'text-white' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+          }`}
+          style={pathname === '/departments' ? { background: '#2B3EE6' } : {}}
+        >
+          <span className={pathname === '/departments' ? 'text-white' : 'text-gray-400'}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </span>
+          Departments
+        </Link>
+
         {/* Hospital */}
         <Link
           href="/hospitals"

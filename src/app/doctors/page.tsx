@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import api from '@/lib/api';
-import { Doctor, Hospital } from '@/types';
+import { Doctor, Hospital, Department } from '@/types';
 import { DIVISIONS, getDistricts, getUpazilas } from '@/lib/bd-locations';
 
 const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors';
@@ -12,11 +12,13 @@ const emptyForm = {
   name: '', phone: '', bmdcNumber: '',
   experience: '', fees: '', bio: '',
   hospitalIds: [] as string[],
+  departmentIds: [] as string[],
 };
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [viewDoctor, setViewDoctor] = useState<Doctor | null>(null);
   const [editDoctor, setEditDoctor] = useState<any>(null);
@@ -42,6 +44,7 @@ export default function DoctorsPage() {
     api.get('/doctors/all').then((r) => setDoctors(r.data)).catch(() =>
       api.get('/doctors').then((r) => setDoctors(r.data)).catch(() => {}));
     api.get('/hospitals').then((r) => setHospitals(r.data)).catch(() => {});
+    api.get('/departments').then((r) => setDepartments(r.data)).catch(() => {});
   }, []);
 
   const set = (k: keyof typeof emptyForm) =>
@@ -117,6 +120,7 @@ export default function DoctorsPage() {
         experience: Number(form.experience) || 0,
         fees: Number(form.fees),
         hospitalIds: form.hospitalIds,
+        departments: form.departmentIds,
         specializations,
         profileImage: profileImageUrl,
         bio: form.bio,
@@ -147,6 +151,7 @@ export default function DoctorsPage() {
       const { data } = await api.put(`/doctors/${editDoctor._id}`, {
         bmdcNumber: editDoctor.bmdcNumber,
         specializations: editDoctor.specializations,
+        departments: editDoctor.departmentIds || [],
         experience: Number(editDoctor.experience) || 0,
         fees: Number(editDoctor.fees),
         bio: editDoctor.bio,
@@ -340,14 +345,14 @@ export default function DoctorsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
-              {['', 'Name', 'BMDC', 'Specialization', 'Exp', 'Fees', 'Hospitals', 'Status', 'Action'].map((h) => (
+              {['', 'Name', 'BMDC', 'Specialization', 'Departments', 'Exp', 'Fees', 'Hospitals', 'Status', 'Action'].map((h) => (
                 <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filteredDoctors.length === 0 && (
-              <tr><td colSpan={9} className="px-5 py-10 text-center text-gray-300 text-sm">
+              <tr><td colSpan={10} className="px-5 py-10 text-center text-gray-300 text-sm">
                 {(doctorFilter.search || doctorFilter.division || doctorFilter.hospital || doctorFilter.specialization || doctorFilter.status) 
                   ? 'No doctors found matching your filters' 
                   : 'No doctors found'}
@@ -367,6 +372,13 @@ export default function DoctorsPage() {
                     {(d.specializations?.length ? d.specializations : [d.specialization]).filter(Boolean).map((s, i) => (
                       <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md text-xs">{s}</span>
                     ))}
+                  </div>
+                </td>
+                <td className="px-5 py-3.5 text-gray-500">
+                  <div className="flex flex-wrap gap-1">
+                    {d.departments?.length ? d.departments.map((dept, i) => (
+                      <span key={i} className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded-md text-xs">{dept.title}</span>
+                    )) : '—'}
                   </div>
                 </td>
                 <td className="px-5 py-3.5 text-gray-500">{d.experience} yrs</td>
@@ -457,8 +469,8 @@ export default function DoctorsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div><label className={labelCls}>Full Name<span className="text-red-400 ml-0.5">*</span></label>
                       <input placeholder="Dr. Full Name" value={form.name} onChange={set('name')} required className={inputCls} /></div>
-                    <div><label className={labelCls}>Phone<span className="text-red-400 ml-0.5">*</span></label>
-                      <input placeholder="Phone number" value={form.phone} onChange={set('phone')} required className={inputCls} /></div>
+                    <div><label className={labelCls}>Phone <span className="text-gray-400">(optional)</span></label>
+                      <input placeholder="Phone number" value={form.phone} onChange={set('phone')} className={inputCls} /></div>
                     <div className="col-span-2"><label className={labelCls}>BMDC Number <span className="text-gray-400">(optional)</span></label>
                       <input placeholder="BMDC Registration Number" value={form.bmdcNumber} onChange={set('bmdcNumber')} className={inputCls} /></div>
                   </div>
@@ -622,9 +634,65 @@ export default function DoctorsPage() {
                   )}
                 </div>
 
+                {/* Department Selection */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Department Assignment</p>
+                  
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3">
+                    {departments.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-4">No departments available</p>
+                    ) : (
+                      departments.map((dept) => (
+                        <label key={dept._id} className="flex items-start gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded-lg">
+                          <input 
+                            type="checkbox" 
+                            checked={form.departmentIds.includes(dept._id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setForm(p => ({ ...p, departmentIds: [...p.departmentIds, dept._id] }));
+                              } else {
+                                setForm(p => ({ ...p, departmentIds: p.departmentIds.filter(id => id !== dept._id) }));
+                              }
+                            }}
+                            className="w-4 h-4 rounded accent-blue-600 mt-0.5" 
+                          />
+                          <div className="flex-1">
+                            <span className="text-sm text-gray-700 font-medium">{dept.title}</span>
+                            {dept.description && (
+                              <p className="text-xs text-gray-400">{dept.description}</p>
+                            )}
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  
+                  {/* Selected Departments */}
+                  {form.departmentIds.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-gray-500 mb-2">Selected Departments ({form.departmentIds.length})</p>
+                      <div className="flex flex-wrap gap-1">
+                        {form.departmentIds.map(id => {
+                          const department = departments?.find(d => d._id === id);
+                          return department ? (
+                            <span key={id} className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-600 rounded text-xs">
+                              {department.title}
+                              <button 
+                                type="button"
+                                onClick={() => setForm(p => ({ ...p, departmentIds: p.departmentIds.filter(dId => dId !== id) }))}
+                                className="hover:text-red-500 ml-1"
+                              >×</button>
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* About */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor/Degree</p>
                   <textarea placeholder="Short bio about the doctor..." value={form.bio} onChange={set('bio')} rows={3}
                     className={`${inputCls} resize-none`} />
                 </div>
@@ -643,55 +711,190 @@ export default function DoctorsPage() {
 
       {/* View Modal */}
       {viewDoctor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}>
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-800">Doctor Details</h2>
-              <button onClick={() => setViewDoctor(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-4">
-                {viewDoctor.profileImage
-                  ? <img src={viewDoctor.profileImage} alt="profile" className="w-16 h-16 rounded-2xl object-cover" />
-                  : <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-400 text-2xl font-bold">{viewDoctor.userId?.name?.[0]}</div>}
-                <div>
-                  <p className="font-semibold text-gray-800 text-base">{viewDoctor.userId?.name}</p>
-                  <p className="text-xs text-gray-400">{viewDoctor.userId?.email}</p>
-                  <p className="text-xs text-gray-400">{viewDoctor.userId?.phone}</p>
-                </div>
+        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="min-h-full flex items-start justify-center p-6 py-10">
+            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+                <h2 className="text-base font-semibold text-gray-800">Doctor Details</h2>
+                <button onClick={() => setViewDoctor(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
               </div>
-              <div className="flex flex-wrap gap-1">
-                {(viewDoctor.specializations?.length ? viewDoctor.specializations : [viewDoctor.specialization]).filter(Boolean).map((s, i) => (
-                  <span key={i} className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium">{s}</span>
-                ))}
-              </div>
-              {[['BMDC Number', viewDoctor.bmdcNumber],
-                ['Experience', `${viewDoctor.experience} years`], 
-                ['Consultation Fee', `৳${viewDoctor.fees}`],
-                ['Hospitals', viewDoctor.hospitalIds?.map(h => h.name).join(', ') || viewDoctor.hospitalId?.name],
-                ['Location', viewDoctor.location ? [viewDoctor.location.division, viewDoctor.location.district, viewDoctor.location.upazila].filter(Boolean).join(' › ') : null],
-                ['Bio', viewDoctor.bio],
-              ].filter(([, v]) => v).map(([label, value]) => (
-                <div key={label as string}>
-                  <p className="text-xs font-medium text-gray-400 mb-0.5">{label}</p>
-                  <p className="text-sm text-gray-700">{value as string}</p>
-                </div>
-              ))}
-              {viewDoctor.schedule?.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-400 mb-2">Schedule</p>
-                  <div className="space-y-1">
-                    {viewDoctor.schedule.map((s) => (
-                      <div key={s.day} className="flex justify-between text-xs">
-                        <span className="text-gray-600 font-medium">{s.day}</span>
-                        <span className="text-gray-400">{s.startTime} — {s.endTime}</span>
-                      </div>
-                    ))}
+
+              <div className="px-6 py-5 space-y-5">
+                {/* Profile Image */}
+                <div className="flex items-center gap-5">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center bg-gray-50">
+                    {viewDoctor.profileImage
+                      ? <img src={viewDoctor.profileImage} alt="profile" className="w-full h-full object-cover" />
+                      : <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-300"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Profile Image</p>
+                    <p className="text-sm font-semibold text-gray-800">{viewDoctor.userId?.name}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {viewDoctor.isApproved ? (
+                        <span className="inline-flex px-2 py-0.5 rounded-lg text-xs font-medium bg-green-50 text-green-600">Approved</span>
+                      ) : (
+                        <span className="inline-flex px-2 py-0.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-600">Pending</span>
+                      )}
+                    </p>
                   </div>
                 </div>
-              )}
+
+                {/* Account Info */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Account Info</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Full Name</label>
+                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
+                        {viewDoctor.userId?.name || '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Phone</label>
+                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
+                        {viewDoctor.userId?.phone || '—'}
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <label className={labelCls}>BMDC Number</label>
+                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700 font-mono">
+                        {viewDoctor.bmdcNumber || 'Not provided'}
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <label className={labelCls}>Email</label>
+                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
+                        {viewDoctor.userId?.email || '—'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Specializations */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Specialization</p>
+                  <div className="min-h-[50px] border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
+                    {(viewDoctor.specializations?.length ? viewDoctor.specializations : [viewDoctor.specialization]).filter(Boolean).length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {(viewDoctor.specializations?.length ? viewDoctor.specializations : [viewDoctor.specialization]).filter(Boolean).map((s, i) => (
+                          <span key={i} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No specializations added</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Professional Info */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Professional Info</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Experience (years)</label>
+                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
+                        {viewDoctor.experience || 0} years
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Consultation Fee (৳)</label>
+                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700 font-semibold">
+                        ৳{viewDoctor.fees}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hospital Selection */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Hospital Assignment</p>
+                  <div className="min-h-[80px] border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
+                    {(viewDoctor.hospitalIds?.length || viewDoctor.hospitalId) ? (
+                      <div className="space-y-2">
+                        {viewDoctor.hospitalIds?.length ? (
+                          viewDoctor.hospitalIds.map((h, i) => (
+                            <div key={i} className="flex items-start gap-3 p-2 bg-white rounded-lg border border-gray-100">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-700">{h.name}</p>
+                                <p className="text-xs text-gray-400">Multiple hospitals assigned</p>
+                              </div>
+                            </div>
+                          ))
+                        ) : viewDoctor.hospitalId ? (
+                          <div className="flex items-start gap-3 p-2 bg-white rounded-lg border border-gray-100">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-700">{viewDoctor.hospitalId.name}</p>
+                              <p className="text-xs text-gray-400">Primary hospital</p>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No hospitals assigned</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Location</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className={labelCls}>Division</label>
+                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
+                        {viewDoctor.location?.division || '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>District</label>
+                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
+                        {viewDoctor.location?.district || '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Upazila</label>
+                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
+                        {viewDoctor.location?.upazila || '—'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* About */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor</p>
+                  <div className="min-h-[80px] border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                      {viewDoctor.bio || 'No bio provided'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-3 border-t border-gray-100">
+                  <button 
+                    onClick={() => {
+                      setViewDoctor(null);
+                      setEditDoctor({ ...viewDoctor, specializations: viewDoctor.specializations || [] });
+                    }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90" 
+                    style={{ background: '#2B3EE6' }}
+                  >
+                    Edit Doctor
+                  </button>
+                  <button 
+                    onClick={() => setViewDoctor(null)} 
+                    className="px-6 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-gray-100 hover:bg-gray-200"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -734,8 +937,8 @@ export default function DoctorsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div><label className={labelCls}>Full Name<span className="text-red-400 ml-0.5">*</span></label>
                       <input value={editDoctor.userId?.name || ''} onChange={(e) => setEditDoctor((p: any) => ({ ...p, userId: { ...p.userId, name: e.target.value } }))} required className={inputCls} /></div>
-                    <div><label className={labelCls}>Phone<span className="text-red-400 ml-0.5">*</span></label>
-                      <input value={editDoctor.userId?.phone || ''} onChange={(e) => setEditDoctor((p: any) => ({ ...p, userId: { ...p.userId, phone: e.target.value } }))} required className={inputCls} /></div>
+                    <div><label className={labelCls}>Phone <span className="text-gray-400">(optional)</span></label>
+                      <input value={editDoctor.userId?.phone || ''} onChange={(e) => setEditDoctor((p: any) => ({ ...p, userId: { ...p.userId, phone: e.target.value } }))} className={inputCls} /></div>
                     <div className="col-span-2"><label className={labelCls}>BMDC Number <span className="text-gray-400">(optional)</span></label>
                       <input placeholder="BMDC Registration Number" value={editDoctor.bmdcNumber || ''} onChange={(e) => setEditDoctor((p: any) => ({ ...p, bmdcNumber: e.target.value }))} className={inputCls} /></div>
                     <div className="col-span-2"><label className={labelCls}>New Password <span className="text-gray-400">(optional)</span></label>

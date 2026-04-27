@@ -28,12 +28,22 @@ export interface AmbulanceBid {
   status: 'pending' | 'accepted' | 'rejected';
 }
 
+export interface Department {
+  _id: string;
+  title: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Doctor {
   _id: string;
   userId: User;
   bmdcNumber: string;
   specialization?: string;
   specializations: string[];
+  departments?: Department[];
   experience: number;
   fees: number;
   bio: string;
