@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
+import DoctorViewModal from '@/components/DoctorViewModal';
 import api from '@/lib/api';
 import { Doctor, Hospital, Department } from '@/types';
 import { DIVISIONS, getDistricts, getUpazilas } from '@/lib/bd-locations';
@@ -22,6 +23,7 @@ export default function DoctorsPage() {
   const [showModal, setShowModal] = useState(false);
   const [viewDoctor, setViewDoctor] = useState<Doctor | null>(null);
   const [editDoctor, setEditDoctor] = useState<any>(null);
+  const [editTab, setEditTab] = useState(0); // 0=Details, 1=Diseases, 2=Education
   const [form, setForm] = useState(emptyForm);
   const [specializations, setSpecializations] = useState<string[]>([]);
   const [specInput, setSpecInput] = useState('');
@@ -149,7 +151,7 @@ export default function DoctorsPage() {
       }
 
       const { data } = await api.put(`/doctors/${editDoctor._id}`, {
-        bmdcNumber: editDoctor.bmdcNumber,
+        bmdcNumber: editDoctor.bmdcNumber?.trim() || undefined,
         specializations: editDoctor.specializations,
         departments: editDoctor.departmentIds || [],
         experience: Number(editDoctor.experience) || 0,
@@ -160,9 +162,16 @@ export default function DoctorsPage() {
         userName: editDoctor.userId?.name,
         userPhone: editDoctor.userId?.phone,
         newPassword: editDoctor.newPassword || undefined,
+        diseasesTitle: editDoctor.diseasesTitle || '',
+        diseasesDescription: editDoctor.diseasesDescription || '',
+        educationTitle: editDoctor.educationTitle || '',
+        educationDescription: editDoctor.educationDescription || '',
+        education: editDoctor.education || [],
+        workExperience: editDoctor.workExperience || [],
       });
       setDoctors((prev) => prev.map((d) => d._id === data._id ? data : d));
       setEditDoctor(null);
+      setEditTab(0);
       setProfileImage(null); setProfilePreview('');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update');
@@ -711,211 +720,24 @@ export default function DoctorsPage() {
 
       {/* View Modal */}
       {viewDoctor && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.4)' }}>
-          <div className="min-h-full flex items-start justify-center p-6 py-10">
-            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
-                <h2 className="text-base font-semibold text-gray-800">Doctor Details</h2>
-                <button onClick={() => setViewDoctor(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-
-              <div className="px-6 py-5 space-y-5">
-                {/* Profile Image */}
-                <div className="flex items-center gap-5">
-                  <div className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center bg-gray-50">
-                    {viewDoctor.profileImage
-                      ? <img src={viewDoctor.profileImage} alt="profile" className="w-full h-full object-cover" />
-                      : <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-300"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Profile Image</p>
-                    <p className="text-sm font-semibold text-gray-800">{viewDoctor.userId?.name}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {viewDoctor.isApproved ? (
-                        <span className="inline-flex px-2 py-0.5 rounded-lg text-xs font-medium bg-green-50 text-green-600">Approved</span>
-                      ) : (
-                        <span className="inline-flex px-2 py-0.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-600">Pending</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Account Info */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Account Info</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={labelCls}>Full Name</label>
-                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
-                        {viewDoctor.userId?.name || '—'}
-                      </div>
-                    </div>
-                    <div>
-                      <label className={labelCls}>Phone</label>
-                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
-                        {viewDoctor.userId?.phone || '—'}
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <label className={labelCls}>BMDC Number</label>
-                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700 font-mono">
-                        {viewDoctor.bmdcNumber || 'Not provided'}
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <label className={labelCls}>Email</label>
-                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
-                        {viewDoctor.userId?.email || '—'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Specializations */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Specialization</p>
-                  <div className="min-h-[50px] border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
-                    {(viewDoctor.specializations?.length ? viewDoctor.specializations : [viewDoctor.specialization]).filter(Boolean).length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {(viewDoctor.specializations?.length ? viewDoctor.specializations : [viewDoctor.specialization]).filter(Boolean).map((s, i) => (
-                          <span key={i} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium">
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-400">No specializations added</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Professional Info */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Professional Info</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={labelCls}>Experience (years)</label>
-                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
-                        {viewDoctor.experience || 0} years
-                      </div>
-                    </div>
-                    <div>
-                      <label className={labelCls}>Consultation Fee (৳)</label>
-                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700 font-semibold">
-                        ৳{viewDoctor.fees}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Hospital Selection */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Hospital Assignment</p>
-                  <div className="min-h-[80px] border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
-                    {(viewDoctor.hospitalIds?.length || viewDoctor.hospitalId) ? (
-                      <div className="space-y-2">
-                        {viewDoctor.hospitalIds?.length ? (
-                          viewDoctor.hospitalIds.map((h, i) => (
-                            <div key={i} className="flex items-start gap-3 p-2 bg-white rounded-lg border border-gray-100">
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-gray-700">{h.name}</p>
-                                <p className="text-xs text-gray-400">Multiple hospitals assigned</p>
-                              </div>
-                            </div>
-                          ))
-                        ) : viewDoctor.hospitalId ? (
-                          <div className="flex items-start gap-3 p-2 bg-white rounded-lg border border-gray-100">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-700">{viewDoctor.hospitalId.name}</p>
-                              <p className="text-xs text-gray-400">Primary hospital</p>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-400">No hospitals assigned</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Location */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Location</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className={labelCls}>Division</label>
-                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
-                        {viewDoctor.location?.division || '—'}
-                      </div>
-                    </div>
-                    <div>
-                      <label className={labelCls}>District</label>
-                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
-                        {viewDoctor.location?.district || '—'}
-                      </div>
-                    </div>
-                    <div>
-                      <label className={labelCls}>Upazila</label>
-                      <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">
-                        {viewDoctor.location?.upazila || '—'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Departments */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Departments</p>
-                  <div className="min-h-[50px] border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
-                    {viewDoctor.departments?.length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {viewDoctor.departments.map((dept, i) => (
-                          <span key={i} className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg text-xs font-medium">
-                            {dept.title}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-400">No departments assigned</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* About */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor</p>
-                  <div className="min-h-[80px] border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                      {viewDoctor.bio || 'No bio provided'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-3 border-t border-gray-100">
-                  <button 
-                    onClick={() => {
-                      setViewDoctor(null);
-                      setEditDoctor({ ...viewDoctor, specializations: viewDoctor.specializations || [], departmentIds: viewDoctor.departments?.map((dept: any) => typeof dept === 'string' ? dept : dept._id) || [] });
-                    }}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90" 
-                    style={{ background: '#2B3EE6' }}
-                  >
-                    Edit Doctor
-                  </button>
-                  <button 
-                    onClick={() => setViewDoctor(null)} 
-                    className="px-6 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-gray-100 hover:bg-gray-200"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DoctorViewModal 
+          doctor={viewDoctor} 
+          onClose={() => setViewDoctor(null)} 
+          onEdit={(d) => { 
+            setViewDoctor(null); 
+            setEditDoctor({ 
+              ...d, 
+              specializations: d.specializations || [], 
+              departmentIds: d.departments?.map((dept: any) => typeof dept === 'string' ? dept : dept._id) || [],
+              diseasesTitle: (d as any).diseasesTitle || '',
+              diseasesDescription: (d as any).diseasesDescription || '',
+              educationTitle: (d as any).educationTitle || '',
+              educationDescription: (d as any).educationDescription || '',
+              education: (d as any).education || [],
+              workExperience: (d as any).workExperience || []
+            }); 
+          }} 
+        />
       )}
       {/* Edit Modal */}
       {editDoctor && (
@@ -924,14 +746,50 @@ export default function DoctorsPage() {
             <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
                 <h2 className="text-base font-semibold text-gray-800">Edit Doctor</h2>
-                <button onClick={() => setEditDoctor(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">
+                <button onClick={() => { setEditDoctor(null); setEditTab(0); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
+              </div>
+
+              {/* Tab Bar */}
+              <div className="px-6 pt-4 pb-3">
+                <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setEditTab(0)}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                      editTab === 0 ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditTab(1)}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                      editTab === 1 ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Diseases
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditTab(2)}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                      editTab === 2 ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Education/Experience
+                  </button>
+                </div>
               </div>
 
               <form onSubmit={handleEdit} className="px-6 py-5 space-y-5">
                 {error && <p className="text-xs text-red-500 bg-red-50 px-4 py-2.5 rounded-xl">{error}</p>}
 
+                {/* Details Tab */}
+                {editTab === 0 && (
+                  <>
                 {/* Profile Image */}
                 <div className="flex items-center gap-5">
                   <label className="cursor-pointer">
@@ -1184,6 +1042,337 @@ export default function DoctorsPage() {
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor</p>
                   <textarea placeholder="Short bio about the doctor..." value={editDoctor.bio || ''} onChange={(e) => setEditDoctor((p: any) => ({ ...p, bio: e.target.value }))} rows={3} className={`${inputCls} resize-none`} />
                 </div>
+                  </>
+                )}
+
+                {/* Diseases Tab */}
+                {editTab === 1 && (
+                  <>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Diseases Information</p>
+                      
+                      {/* Title */}
+                      <div className="mb-3">
+                        <label className={labelCls}>Title</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g., Diseases I Treat"
+                          value={editDoctor.diseasesTitle || ''} 
+                          onChange={(e) => setEditDoctor((p: any) => ({ ...p, diseasesTitle: e.target.value }))} 
+                          className={inputCls} 
+                        />
+                      </div>
+
+                      {/* Description with Bold Button */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className={labelCls}>Description</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const textarea = document.getElementById('diseases-desc') as HTMLTextAreaElement;
+                              const start = textarea.selectionStart;
+                              const end = textarea.selectionEnd;
+                              const selectedText = textarea.value.substring(start, end);
+                              if (selectedText) {
+                                const newText = textarea.value.substring(0, start) + `<b>${selectedText}</b>` + textarea.value.substring(end);
+                                setEditDoctor((p: any) => ({ ...p, diseasesDescription: newText }));
+                                setTimeout(() => {
+                                  textarea.focus();
+                                  textarea.setSelectionRange(start, end + 7);
+                                }, 0);
+                              }
+                            }}
+                            className="px-3 py-1 text-xs font-bold bg-gray-100 hover:bg-gray-200 rounded-lg"
+                            title="Select text and click to make it bold"
+                          >
+                            <b>B</b>
+                          </button>
+                        </div>
+                        <textarea 
+                          id="diseases-desc"
+                          placeholder="Describe the diseases you treat. Select text and click B to make it bold."
+                          value={editDoctor.diseasesDescription || ''} 
+                          onChange={(e) => setEditDoctor((p: any) => ({ ...p, diseasesDescription: e.target.value }))} 
+                          rows={8} 
+                          className={`${inputCls} resize-none font-mono text-xs`} 
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Tip: Select text and click the B button to make it bold</p>
+                      </div>
+
+                      {/* Preview */}
+                      {editDoctor.diseasesDescription && (
+                        <div className="mt-3">
+                          <p className="text-xs font-medium text-gray-500 mb-2">Preview:</p>
+                          <div 
+                            className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-sm text-gray-700 whitespace-pre-wrap"
+                            dangerouslySetInnerHTML={{ __html: editDoctor.diseasesDescription }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Education/Experience Tab */}
+                {editTab === 2 && (
+                  <>
+                    {/* Education/Experience Information */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Education/Experience Information</p>
+                      
+                      {/* Title */}
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., My Education & Experience"
+                          value={editDoctor.educationTitle || ''} 
+                          onChange={(e) => setEditDoctor((p: any) => ({ ...p, educationTitle: e.target.value }))} 
+                          className={inputCls} 
+                        />
+                      </div>
+
+                      {/* Description with Bold Button */}
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-sm font-medium text-gray-700">Description</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const textarea = document.getElementById('education-desc') as HTMLTextAreaElement;
+                              if (!textarea) return;
+                              const start = textarea.selectionStart;
+                              const end = textarea.selectionEnd;
+                              const selectedText = textarea.value.substring(start, end);
+                              if (selectedText) {
+                                const newText = textarea.value.substring(0, start) + `<b>${selectedText}</b>` + textarea.value.substring(end);
+                                setEditDoctor((p: any) => ({ ...p, educationDescription: newText }));
+                                setTimeout(() => {
+                                  textarea.focus();
+                                  textarea.setSelectionRange(start, end + 7);
+                                }, 0);
+                              }
+                            }}
+                            className="px-3 py-1 text-xs font-bold bg-gray-200 hover:bg-gray-300 rounded"
+                          >
+                            B
+                          </button>
+                        </div>
+                        <textarea
+                          id="education-desc"
+                          placeholder="Describe your education and experience. Select text and click B to make it bold."
+                          value={editDoctor.educationDescription || ''} 
+                          onChange={(e) => setEditDoctor((p: any) => ({ ...p, educationDescription: e.target.value }))} 
+                          rows={8} 
+                          className={`${inputCls} resize-none font-mono text-xs`} 
+                        />
+                      </div>
+
+                      {/* Preview */}
+                      {editDoctor.educationDescription && (
+                        <div className="mt-3">
+                          <p className="text-xs font-medium text-gray-500 mb-2">Preview:</p>
+                          <div 
+                            className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-sm text-gray-700 whitespace-pre-wrap"
+                            dangerouslySetInnerHTML={{ __html: editDoctor.educationDescription }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Education Section */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 mt-6">Education History</p>
+                      
+                      {/* Education List */}
+                      {editDoctor.education && editDoctor.education.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                          {editDoctor.education.map((edu: any, i: number) => (
+                            <div key={i} className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
+                              <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                                  </svg>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-bold text-gray-800">{edu.degree}</p>
+                                  <p className="text-sm text-gray-600 mt-0.5">{edu.institution}</p>
+                                  <p className="text-xs text-gray-400 mt-1">{edu.year}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditDoctor((p: any) => ({
+                                      ...p,
+                                      education: p.education.filter((_: any, idx: number) => idx !== i)
+                                    }));
+                                  }}
+                                  className="text-red-500 hover:text-red-700 text-sm font-bold"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add New Education */}
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-4">
+                        <p className="text-xs font-medium text-gray-500 mb-3">Add Education Entry</p>
+                        <div className="space-y-2">
+                          <div>
+                            <label className={labelCls}>Degree</label>
+                            <input 
+                              type="text"
+                              id="edu-degree"
+                              placeholder="e.g., MBBS"
+                              className={inputCls} 
+                            />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Institution</label>
+                            <input 
+                              type="text"
+                              id="edu-institution"
+                              placeholder="e.g., Dhaka Medical College"
+                              className={inputCls} 
+                            />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Year</label>
+                            <input 
+                              type="text"
+                              id="edu-year"
+                              placeholder="e.g., 2015"
+                              className={inputCls} 
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const degree = (document.getElementById('edu-degree') as HTMLInputElement).value.trim();
+                              const institution = (document.getElementById('edu-institution') as HTMLInputElement).value.trim();
+                              const year = (document.getElementById('edu-year') as HTMLInputElement).value.trim();
+                              
+                              if (degree && institution && year) {
+                                setEditDoctor((p: any) => ({
+                                  ...p,
+                                  education: [...(p.education || []), { degree, institution, year }]
+                                }));
+                                (document.getElementById('edu-degree') as HTMLInputElement).value = '';
+                                (document.getElementById('edu-institution') as HTMLInputElement).value = '';
+                                (document.getElementById('edu-year') as HTMLInputElement).value = '';
+                              }
+                            }}
+                            className="w-full py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90" 
+                            style={{ background: '#2B3EE6' }}
+                          >
+                            Add Education
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Experience Section */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Work Experience</p>
+                      
+                      {/* Experience List */}
+                      {editDoctor.workExperience && editDoctor.workExperience.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                          {editDoctor.workExperience.map((exp: any, i: number) => (
+                            <div key={i} className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
+                              <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-bold text-gray-800">{exp.position}</p>
+                                  <p className="text-sm text-gray-600 mt-0.5">{exp.organization}</p>
+                                  <p className="text-xs text-gray-400 mt-1">{exp.duration}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditDoctor((p: any) => ({
+                                      ...p,
+                                      workExperience: p.workExperience.filter((_: any, idx: number) => idx !== i)
+                                    }));
+                                  }}
+                                  className="text-red-500 hover:text-red-700 text-sm font-bold"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add New Experience */}
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-4">
+                        <p className="text-xs font-medium text-gray-500 mb-3">Add Experience Entry</p>
+                        <div className="space-y-2">
+                          <div>
+                            <label className={labelCls}>Position</label>
+                            <input 
+                              type="text"
+                              id="exp-position"
+                              placeholder="e.g., Senior Consultant"
+                              className={inputCls} 
+                            />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Organization</label>
+                            <input 
+                              type="text"
+                              id="exp-organization"
+                              placeholder="e.g., Square Hospital"
+                              className={inputCls} 
+                            />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Duration</label>
+                            <input 
+                              type="text"
+                              id="exp-duration"
+                              placeholder="e.g., 2018 - Present"
+                              className={inputCls} 
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const position = (document.getElementById('exp-position') as HTMLInputElement).value.trim();
+                              const organization = (document.getElementById('exp-organization') as HTMLInputElement).value.trim();
+                              const duration = (document.getElementById('exp-duration') as HTMLInputElement).value.trim();
+                              
+                              if (position && organization && duration) {
+                                setEditDoctor((p: any) => ({
+                                  ...p,
+                                  workExperience: [...(p.workExperience || []), { position, organization, duration }]
+                                }));
+                                (document.getElementById('exp-position') as HTMLInputElement).value = '';
+                                (document.getElementById('exp-organization') as HTMLInputElement).value = '';
+                                (document.getElementById('exp-duration') as HTMLInputElement).value = '';
+                              }
+                            }}
+                            className="w-full py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90" 
+                            style={{ background: '#2B3EE6' }}
+                          >
+                            Add Experience
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="flex gap-3 pt-1">
                   <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-60 hover:opacity-90" style={{ background: '#2B3EE6' }}>

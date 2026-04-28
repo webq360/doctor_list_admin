@@ -91,10 +91,15 @@ export interface Appointment {
   time: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   notes: string;
-  appointmentFor?: 'self' | 'other';
-  appointmentForName?: string;
-  appointmentForPhone?: string;
-  appointmentForAge?: number;
+  
+  // Patient details
+  patientType?: 'Myself' | 'Others';
+  patientName?: string;
+  patientMobile?: string;
+  patientAge?: number;
+  patientGender?: 'Male' | 'Female' | 'Other';
+  patientAddress?: string;
+  
   serialNumber?: string;
   statusChangeMessage?: string;
 }

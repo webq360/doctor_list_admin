@@ -267,25 +267,49 @@ export default function AppointmentsPage() {
 
                 {/* Appointment For Info */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Appointment For</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Patient Details</p>
                   <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-                    {viewAppointment.appointmentFor === 'self' ? (
-                      <p className="text-sm text-blue-700 font-medium">This appointment is for the patient themselves</p>
-                    ) : (
-                      <div className="space-y-2">
-                        <p className="text-sm text-blue-700 font-medium">This appointment is for someone else</p>
-                        <div className="grid grid-cols-3 gap-2 mt-2">
+                    <div className="mb-2">
+                      <span className="text-xs font-medium text-blue-600">Appointment Type: </span>
+                      <span className="text-sm text-blue-900 font-semibold">{viewAppointment.patientType || 'Myself'}</span>
+                    </div>
+                    
+                    {viewAppointment.patientType === 'Others' ? (
+                      <div className="space-y-2 mt-3">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-blue-600 mb-1">Name</label>
-                            <div className="text-sm text-blue-900 font-medium">{viewAppointment.appointmentForName || '—'}</div>
+                            <label className="block text-xs font-medium text-blue-600 mb-1">Patient Name</label>
+                            <div className="text-sm text-blue-900 font-medium">{viewAppointment.patientName || '—'}</div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-blue-600 mb-1">Phone</label>
-                            <div className="text-sm text-blue-900 font-medium">{viewAppointment.appointmentForPhone || '—'}</div>
+                            <label className="block text-xs font-medium text-blue-600 mb-1">Mobile Number</label>
+                            <div className="text-sm text-blue-900 font-medium font-mono">{viewAppointment.patientMobile || '—'}</div>
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-blue-600 mb-1">Age</label>
-                            <div className="text-sm text-blue-900 font-medium">{viewAppointment.appointmentForAge ? `${viewAppointment.appointmentForAge} years` : '—'}</div>
+                            <div className="text-sm text-blue-900 font-medium">{viewAppointment.patientAge ? `${viewAppointment.patientAge} years` : '—'}</div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-blue-600 mb-1">Gender</label>
+                            <div className="text-sm text-blue-900 font-medium">{viewAppointment.patientGender || '—'}</div>
+                          </div>
+                          <div className="col-span-2">
+                            <label className="block text-xs font-medium text-blue-600 mb-1">Address</label>
+                            <div className="text-sm text-blue-900">{viewAppointment.patientAddress || '—'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 mt-3">
+                        <p className="text-sm text-blue-700 font-medium">Appointment for the user themselves</p>
+                        <div className="grid grid-cols-2 gap-3 mt-2">
+                          <div>
+                            <label className="block text-xs font-medium text-blue-600 mb-1">Age</label>
+                            <div className="text-sm text-blue-900 font-medium">{viewAppointment.patientAge ? `${viewAppointment.patientAge} years` : '—'}</div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-blue-600 mb-1">Gender</label>
+                            <div className="text-sm text-blue-900 font-medium">{viewAppointment.patientGender || '—'}</div>
                           </div>
                         </div>
                       </div>
