@@ -46,12 +46,24 @@ export default function AppointmentsPage() {
 
   const updateStatus = async (id: string, status: string, message?: string) => {
     try {
-      await api.patch(`/appointments/${id}/status`, { status, statusChangeMessage: message });
-      setAppointments((prev) => prev.map((a) => (a._id === id ? { ...a, status: status as Appointment['status'], statusChangeMessage: message } : a)));
+      const payload: any = { status };
+      
+      if (status === 'confirmed' && message?.includes('|')) {
+        const [statusMessage, serialNumber] = message.split('|');
+        payload.statusChangeMessage = statusMessage;
+        if (serialNumber.trim()) {
+          payload.serialNumber = serialNumber.trim();
+        }
+      } else {
+        payload.statusChangeMessage = message;
+      }
+      
+      await api.patch(`/appointments/${id}/status`, payload);
+      setAppointments((prev) => prev.map((a) => (a._id === id ? { ...a, status: status as Appointment['status'], statusChangeMessage: payload.statusChangeMessage, ...(payload.serialNumber && { serialNumber: payload.serialNumber }) } : a)));
       setStatusChangeModal(null);
       setStatusChangeMessage('');
       if (viewAppointment?._id === id) {
-        setViewAppointment({ ...viewAppointment, status: status as Appointment['status'], statusChangeMessage: message });
+        setViewAppointment({ ...viewAppointment, status: status as Appointment['status'], statusChangeMessage: payload.statusChangeMessage, ...(payload.serialNumber && { serialNumber: payload.serialNumber }) });
       }
     } catch (err) {
       console.error('Failed to update status:', err);
@@ -579,10 +591,19 @@ export default function AppointmentsPage() {
 
               <div className="px-6 py-5 space-y-4">
                 {statusChangeModal.newStatus === 'confirmed' && (
-                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-                    <p className="text-sm text-blue-900">
-                      <span className="font-semibold">Serial Number:</span> {viewAppointment?.serialNumber}
-                    </p>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-2">Serial Number</label>
+                    <input
+                      type="text"
+                      placeholder="Enter serial number (optional - will auto-generate if empty)"
+                      value={statusChangeMessage.split('|')[1] || ''}
+                      onChange={(e) => {
+                        const message = statusChangeMessage.split('|')[0] || '';
+                        setStatusChangeMessage(`${message}|${e.target.value}`);
+                      }}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Leave empty to auto-generate</p>
                   </div>
                 )}
 
@@ -601,8 +622,15 @@ export default function AppointmentsPage() {
                       statusChangeModal.newStatus === 'cancelled' ? 'e.g., Appointment cancelled due to doctor unavailability.' :
                       'Enter message for patient'
                     }
-                    value={statusChangeMessage}
-                    onChange={(e) => setStatusChangeMessage(e.target.value)}
+                    value={statusChangeModal.newStatus === 'confirmed' ? statusChangeMessage.split('|')[0] || '' : statusChangeMessage}
+                    onChange={(e) => {
+                      if (statusChangeModal.newStatus === 'confirmed') {
+                        const serialNum = statusChangeMessage.split('|')[1] || '';
+                        setStatusChangeMessage(`${e.target.value}|${serialNum}`);
+                      } else {
+                        setStatusChangeMessage(e.target.value);
+                      }
+                    }}
                     rows={4}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 resize-none"
                   />
