@@ -189,6 +189,15 @@ export default function DoctorsPage() {
     setDoctors((prev) => prev.map((d) => d._id === id ? { ...d, isApproved: true } : d));
   };
 
+  const togglePopular = async (d: Doctor) => {
+    try {
+      await api.patch(`/doctors/${d._id}/popular`, { isPopular: !d.isPopular });
+      setDoctors((prev) => prev.map((x) => x._id === d._id ? { ...x, isPopular: !d.isPopular } : x));
+    } catch (err) {
+      console.error('Failed to toggle popular:', err);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this doctor?')) return;
     await api.delete(`/doctors/${id}`);
@@ -354,14 +363,14 @@ export default function DoctorsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
-              {['', 'Name', 'BMDC', 'Specialization', 'Departments', 'Exp', 'Fees', 'Hospitals', 'Status', 'Action'].map((h) => (
+              {['', 'Name', 'BMDC', 'Specialization', 'Departments', 'Exp', 'Fees', 'Hospitals', 'Status', 'Popular', 'Action'].map((h) => (
                 <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filteredDoctors.length === 0 && (
-              <tr><td colSpan={10} className="px-5 py-10 text-center text-gray-300 text-sm">
+              <tr><td colSpan={11} className="px-5 py-10 text-center text-gray-300 text-sm">
                 {(doctorFilter.search || doctorFilter.division || doctorFilter.hospital || doctorFilter.specialization || doctorFilter.status) 
                   ? 'No doctors found matching your filters' 
                   : 'No doctors found'}
@@ -405,6 +414,21 @@ export default function DoctorsPage() {
                   <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${d.isApproved ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
                     {d.isApproved ? 'Approved' : 'Pending'}
                   </span>
+                </td>
+                <td className="px-5 py-3.5">
+                  <button
+                    onClick={() => togglePopular(d)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      d.isPopular
+                        ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100'
+                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                    }`}
+                  >
+                    <svg width="14" height="14" fill={d.isPopular ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    {d.isPopular ? 'Popular' : 'Not Popular'}
+                  </button>
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-2">

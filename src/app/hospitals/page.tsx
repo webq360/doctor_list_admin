@@ -821,6 +821,18 @@ export default function HospitalsPage() {
     }
   };
 
+  const togglePopular = async (id: string) => {
+    try {
+      const hospital = hospitals.find(h => h._id === id);
+      if (!hospital) return;
+      const { data } = await api.patch(`/hospitals/${id}/popular`, { isPopular: !hospital.isPopular });
+      setHospitals((prev) => prev.map((h) => h._id === id ? data.hospital : h));
+    } catch (err: any) {
+      console.error('Toggle popular error:', err.response?.data || err.message);
+      alert(`Failed to toggle: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -1036,7 +1048,7 @@ export default function HospitalsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
-              {['', 'Name', 'Location', 'Contact Person', 'Mobile', 'Status', 'Show in Home', 'Action'].map((h) => (
+              {['', 'Name', 'Location', 'Contact Person', 'Mobile', 'Status', 'Popular', 'Action'].map((h) => (
                 <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
@@ -1088,17 +1100,17 @@ export default function HospitalsPage() {
                 </td>
                 <td className="px-5 py-3.5">
                   <button
-                    onClick={() => toggleShowInHome(h._id)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      h.showInHome ? 'bg-blue-500' : 'bg-gray-200'
+                    onClick={() => togglePopular(h._id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      h.isPopular
+                        ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100'
+                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
                     }`}
-                    title={h.showInHome ? 'Showing in home page' : 'Hidden from home page'}
                   >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        h.showInHome ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
+                    <svg width="14" height="14" fill={h.isPopular ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    {h.isPopular ? 'Popular' : 'Not Popular'}
                   </button>
                 </td>
                 <td className="px-5 py-3.5">
