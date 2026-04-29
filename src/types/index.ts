@@ -48,6 +48,7 @@ export interface Doctor {
   fees: number;
   bio: string;
   isApproved: boolean;
+  isPopular?: boolean;
   hospitalId?: Hospital;
   hospitalIds?: Hospital[];
   profileImage?: string;
@@ -72,6 +73,7 @@ export interface Hospital {
   }>;
   status?: 'active' | 'paused';
   showInHome?: boolean;  // New field
+  isPopular?: boolean;
   // Legacy fields for backward compatibility
   contactPersonName?: string;
   contactPersonDesignation?: string;
