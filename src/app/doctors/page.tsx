@@ -11,6 +11,7 @@ const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
 
 const emptyForm = {
   name: '', phone: '', bmdcNumber: '',
+  specialization: '',
   experience: '', fees: '', bio: '',
   hospitalIds: [] as string[],
   departmentIds: [] as string[],
@@ -25,8 +26,6 @@ export default function DoctorsPage() {
   const [editDoctor, setEditDoctor] = useState<any>(null);
   const [editTab, setEditTab] = useState(0); // 0=Details, 1=Diseases, 2=Education
   const [form, setForm] = useState(emptyForm);
-  const [specializations, setSpecializations] = useState<string[]>([]);
-  const [specInput, setSpecInput] = useState('');
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,12 +51,6 @@ export default function DoctorsPage() {
   const set = (k: keyof typeof emptyForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
-
-  const addSpec = () => {
-    const v = specInput.trim();
-    if (v && !specializations.includes(v)) setSpecializations((p) => [...p, v]);
-    setSpecInput('');
-  };
 
   // Filter hospitals based on location and search
   const filteredHospitals = hospitals?.filter(h => {
@@ -123,13 +116,13 @@ export default function DoctorsPage() {
         fees: Number(form.fees),
         hospitalIds: form.hospitalIds,
         departments: form.departmentIds,
-        specializations,
+        specializations: form.specialization ? [form.specialization] : [],
         profileImage: profileImageUrl,
         bio: form.bio,
       });
       setDoctors((prev) => [...prev, data]);
       setShowModal(false);
-      setForm(emptyForm); setSpecializations([]); setSpecInput('');
+      setForm(emptyForm);
       setProfileImage(null); setProfilePreview('');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create doctor');
@@ -185,8 +178,12 @@ export default function DoctorsPage() {
   };
 
   const approve = async (id: string) => {
-    await api.patch(`/doctors/${id}/approve`);
-    setDoctors((prev) => prev.map((d) => d._id === id ? { ...d, isApproved: true } : d));
+    const doctor = doctors.find(d => d._id === id);
+    if (!doctor) return;
+    
+    const newStatus = !doctor.isApproved;
+    await api.patch(`/doctors/${id}/approve`, { isApproved: newStatus });
+    setDoctors((prev) => prev.map((d) => d._id === id ? { ...d, isApproved: newStatus } : d));
   };
 
   const togglePopular = async (d: Doctor) => {
@@ -206,7 +203,6 @@ export default function DoctorsPage() {
 
   const openModal = () => {
     setShowModal(true); setError(''); setForm(emptyForm);
-    setSpecializations([]); setSpecInput('');
     setProfileImage(null); setProfilePreview('');
     setHospitalFilter({ division: '', district: '', upazila: '', search: '' });
   };
@@ -225,7 +221,7 @@ export default function DoctorsPage() {
   return (
     <AdminLayout title="Doctor List" action={addBtn}>
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {[
           { label: 'Total Doctors', value: filteredDoctors.length, color: 'bg-blue-50 text-blue-600', icon: '👨‍⚕️' },
           { label: 'Approved', value: filteredDoctors.filter((d) => d.isApproved).length, color: 'bg-green-50 text-green-600', icon: '✅' },
@@ -272,7 +268,7 @@ export default function DoctorsPage() {
         </div>
 
         {/* Filter Options */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
           {/* Location Filters */}
           <select 
             value={doctorFilter.division} 
@@ -359,18 +355,19 @@ export default function DoctorsPage() {
       </div>
 
       {/* List */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100">
-              {['', 'Name', 'BMDC', 'Specialization', 'Departments', 'Exp', 'Fees', 'Hospitals', 'Status', 'Popular', 'Action'].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
+      <div className="bg-white rounded-2xl border border-gray-100 w-full">
+        <div className="w-full overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <table className="w-full text-sm table-auto" style={{ minWidth: '1000px' }}>
+            <thead className="bg-gray-50">
+              <tr className="border-b border-gray-100">
+                {['', 'Name', 'BMDC', 'Specialization', 'Departments', 'Address', 'Hospitals', 'Status', 'Popular', 'Action'].map((h) => (
+                  <th key={h} className="px-3 sm:px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
           <tbody>
             {filteredDoctors.length === 0 && (
-              <tr><td colSpan={11} className="px-5 py-10 text-center text-gray-300 text-sm">
+              <tr><td colSpan={10} className="px-5 py-10 text-center text-gray-300 text-sm">
                 {(doctorFilter.search || doctorFilter.division || doctorFilter.hospital || doctorFilter.specialization || doctorFilter.status) 
                   ? 'No doctors found matching your filters' 
                   : 'No doctors found'}
@@ -399,8 +396,17 @@ export default function DoctorsPage() {
                     )) : '—'}
                   </div>
                 </td>
-                <td className="px-5 py-3.5 text-gray-500">{d.experience} yrs</td>
-                <td className="px-5 py-3.5 text-gray-500">৳{d.fees}</td>
+                <td className="px-5 py-3.5 text-gray-500">
+                  <div className="text-xs">
+                    {d.location?.division || d.location?.district || d.location?.upazila ? (
+                      <>
+                        {d.location?.upazila && <div>{d.location.upazila}</div>}
+                        {d.location?.district && <div>{d.location.district}</div>}
+                        {d.location?.division && <div className="text-gray-400">{d.location.division}</div>}
+                      </>
+                    ) : '—'}
+                  </div>
+                </td>
                 <td className="px-5 py-3.5 text-gray-500">
                   <div className="flex flex-wrap gap-1">
                     {d.hospitalIds?.length ? d.hospitalIds.map((h, i) => (
@@ -431,7 +437,7 @@ export default function DoctorsPage() {
                   </button>
                 </td>
                 <td className="px-5 py-3.5">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button onClick={() => setViewDoctor(d)}
                       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
                       View
@@ -440,13 +446,12 @@ export default function DoctorsPage() {
                       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors">
                       Edit
                     </button>
-                    <button onClick={() => toggleBan(d)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                        d.userId?.isActive ? 'bg-orange-50 text-orange-500 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'
-                      }`}>
-                      {d.userId?.isActive ? 'Ban' : 'Unban'}
-                    </button>
-                    {!d.isApproved && (
+                    {d.isApproved ? (
+                      <button onClick={() => approve(d._id)}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
+                        Set Pending
+                      </button>
+                    ) : (
                       <button onClick={() => approve(d._id)}
                         className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
                         Approve
@@ -462,6 +467,7 @@ export default function DoctorsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Add Modal */}
@@ -509,26 +515,17 @@ export default function DoctorsPage() {
                   </div>
                 </div>
 
-                {/* Specializations */}
+                {/* Specialist */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Specialization</p>
-                  <div className="flex gap-2 mb-2">
-                    <input placeholder="e.g. Cardiology" value={specInput} onChange={(e) => setSpecInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSpec(); } }}
-                      className={inputCls} />
-                    <button type="button" onClick={addSpec}
-                      className="px-4 py-2.5 rounded-xl text-sm font-medium text-white shrink-0" style={{ background: '#2B3EE6' }}>Add</button>
-                  </div>
-                  {specializations.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {specializations.map((s) => (
-                        <span key={s} className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium">
-                          {s}
-                          <button type="button" onClick={() => setSpecializations((p) => p.filter((x) => x !== s))} className="hover:text-red-500">×</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <label className={labelCls}>Specialist</label>
+                  <input placeholder="e.g. Cardiologist, Neurologist" value={form.specialization} onChange={set('specialization')} className={inputCls} />
+                </div>
+
+                {/* About Doctor/Degree */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor/Degree</p>
+                  <textarea placeholder="Short bio about the doctor or degree information..." value={form.bio} onChange={set('bio')} rows={3}
+                    className={`${inputCls} resize-none`} />
                 </div>
 
                 {/* Professional Info */}
@@ -723,13 +720,6 @@ export default function DoctorsPage() {
                   )}
                 </div>
 
-                {/* About */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor/Degree</p>
-                  <textarea placeholder="Short bio about the doctor..." value={form.bio} onChange={set('bio')} rows={3}
-                    className={`${inputCls} resize-none`} />
-                </div>
-
                 <div className="flex gap-3 pt-1">
                   <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-60 hover:opacity-90" style={{ background: '#2B3EE6' }}>
                     {loading ? 'Creating...' : 'Create Doctor'}
@@ -847,24 +837,27 @@ export default function DoctorsPage() {
                   </div>
                 </div>
 
-                {/* Specializations */}
+                {/* Specialist */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Specialization</p>
-                  <div className="flex gap-2 mb-2">
-                    <input placeholder="Add specialization" id="edit-spec-input"
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const v = (e.target as HTMLInputElement).value.trim(); if (v && !editDoctor.specializations.includes(v)) { setEditDoctor((p: any) => ({ ...p, specializations: [...p.specializations, v] })); (e.target as HTMLInputElement).value = ''; } } }}
-                      className={inputCls} />
-                    <button type="button" onClick={() => { const el = document.getElementById('edit-spec-input') as HTMLInputElement; const v = el.value.trim(); if (v && !editDoctor.specializations.includes(v)) { setEditDoctor((p: any) => ({ ...p, specializations: [...p.specializations, v] })); el.value = ''; } }}
-                      className="px-4 py-2.5 rounded-xl text-sm font-medium text-white shrink-0" style={{ background: '#2B3EE6' }}>Add</button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {editDoctor.specializations?.map((s: string) => (
-                      <span key={s} className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium">
-                        {s}
-                        <button type="button" onClick={() => setEditDoctor((p: any) => ({ ...p, specializations: p.specializations.filter((x: string) => x !== s) }))} className="hover:text-red-500">×</button>
-                      </span>
-                    ))}
-                  </div>
+                  <label className={labelCls}>Specialist</label>
+                  <input 
+                    placeholder="e.g. Cardiologist, Neurologist" 
+                    value={editDoctor.specializations?.[0] || ''} 
+                    onChange={(e) => setEditDoctor((p: any) => ({ ...p, specializations: e.target.value ? [e.target.value] : [] }))} 
+                    className={inputCls} 
+                  />
+                </div>
+
+                {/* About Doctor/Degree */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor/Degree</p>
+                  <textarea 
+                    placeholder="Short bio about the doctor or degree information..." 
+                    value={editDoctor.bio || ''} 
+                    onChange={(e) => setEditDoctor((p: any) => ({ ...p, bio: e.target.value }))} 
+                    rows={3}
+                    className={`${inputCls} resize-none`} 
+                  />
                 </div>
 
                 {/* Professional Info */}

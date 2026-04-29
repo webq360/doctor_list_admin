@@ -5,3 +5,27 @@
 *, *::before, *::after {
   box-sizing: border-box;
 }
+
+/* Responsive Table Wrapper */
+@layer utilities {
+  .responsive-table-wrapper {
+    @apply w-full overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .responsive-table {
+    @apply w-full min-w-max;
+  }
+  
+  /* Prevent layout shift on zoom */
+  .no-layout-shift {
+    @apply max-w-full overflow-x-auto;
+  }
+}
+
+/* Ensure body doesn't overflow */
+body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
