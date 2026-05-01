@@ -51,7 +51,7 @@ const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm o
 const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
 
 const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const SHIFTS = ['Morning', 'Evening', 'Night'] as const;
+const SHIFTS = ['Morning', 'Evening'] as const;
 
 type Shift = typeof SHIFTS[number];
 
@@ -132,10 +132,6 @@ function ScheduleManager({ hospitalId, doctorId, doctorName }: { hospitalId: str
         nextShift = 'Evening';
         defaultStart = '16:00';
         defaultEnd = '20:00';
-      } else if (!existingShifts.includes('Night')) {
-        nextShift = 'Night';
-        defaultStart = '20:00';
-        defaultEnd = '00:00';
       } else {
         return s; // All shifts added
       }
@@ -198,7 +194,7 @@ function ScheduleManager({ hospitalId, doctorId, doctorName }: { hospitalId: str
                 </button>
               </div>
               <div className="px-6 py-5 space-y-3">
-                <p className="text-xs text-gray-500">Select days and add shifts (Morning, Evening, Night). Patients will see these times when booking.</p>
+                <p className="text-xs text-gray-500">Select days and add shifts (Morning, Evening). Patients will see these times when booking.</p>
                 {DAYS.map((day) => {
                   const daySchedule = schedule.find((s) => s.day === day);
                   const active = !!daySchedule;
@@ -211,7 +207,7 @@ function ScheduleManager({ hospitalId, doctorId, doctorName }: { hospitalId: str
                           {active && <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                         </button>
                         <span className={`text-sm font-medium flex-1 ${active ? 'text-blue-800' : 'text-gray-500'}`}>{day}</span>
-                        {active && daySchedule.shifts.length < 3 && (
+                        {active && daySchedule.shifts.length < 2 && (
                           <button
                             type="button"
                             onClick={() => addShift(day)}
@@ -232,10 +228,9 @@ function ScheduleManager({ hospitalId, doctorId, doctorName }: { hospitalId: str
                               <div className="flex-shrink-0">
                                 <span className={`text-xs font-semibold px-2 py-1 rounded ${
                                   shift.shift === 'Morning' ? 'bg-yellow-100 text-yellow-700' :
-                                  shift.shift === 'Evening' ? 'bg-orange-100 text-orange-700' :
-                                  'bg-indigo-100 text-indigo-700'
+                                  'bg-orange-100 text-orange-700'
                                 }`}>
-                                  {shift.shift === 'Morning' ? '🌅' : shift.shift === 'Evening' ? '🌆' : '🌙'} {shift.shift}
+                                  {shift.shift === 'Morning' ? '🌅' : '🌆'} {shift.shift}
                                 </span>
                               </div>
                               <input 
