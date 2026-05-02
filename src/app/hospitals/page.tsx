@@ -869,6 +869,8 @@ export default function HospitalsPage() {
         contactPersons: validContacts,
         logo: logoUrl,
         coverImage: coverUrl,
+        callActive: editHospital.callActive,
+        bookAppointmentActive: editHospital.bookAppointmentActive,
       });
       setHospitals((prev) => prev.map((h) => h._id === data._id ? data : h));
       setEditHospital(null);
