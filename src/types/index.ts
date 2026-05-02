@@ -70,10 +70,15 @@ export interface Hospital {
     designation: string;
     mobile: string;
     whatsapp?: string;
+    isPublished?: boolean;
+    isForPatient?: boolean;
+    isForDoctorList?: boolean;
   }>;
   status?: 'active' | 'paused';
   showInHome?: boolean;  // New field
   isPopular?: boolean;
+  callActive?: boolean;
+  bookAppointmentActive?: boolean;
   // Legacy fields for backward compatibility
   contactPersonName?: string;
   contactPersonDesignation?: string;
