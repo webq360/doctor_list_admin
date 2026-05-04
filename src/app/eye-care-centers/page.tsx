@@ -1,4 +1,4 @@
-?'use client';
+'use client';
 import { useEffect, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import CenterServiceTab from '@/components/CenterServiceTab';

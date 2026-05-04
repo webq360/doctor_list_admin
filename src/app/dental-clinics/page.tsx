@@ -600,7 +600,7 @@ export default function DentalClinicsPage() {
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <table className="w-full text-sm" style={{ minWidth: '550px' }}>
+          <table className="w-full text-sm" style={{ minWidth: '550px' }}>
           <thead><tr className="border-b border-gray-100">
             {['', 'Name', 'Contact', 'Location', 'Action'].map((h) => (
               <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
@@ -634,6 +634,7 @@ export default function DentalClinicsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* View Modal */}
