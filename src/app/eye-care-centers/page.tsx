@@ -1,4 +1,4 @@
-﻿﻿'use client';
+?'use client';
 import { useEffect, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import CenterServiceTab from '@/components/CenterServiceTab';
@@ -8,7 +8,7 @@ import { DIVISIONS, getDistricts, getUpazilas } from '@/lib/bd-locations';
 const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors';
 const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
 
-// â”€â”€ Gallery Tab â”€â”€
+// ── Gallery Tab ──
 const emptyGalleryForm = { title: '', description: '' };
 
 function GalleryTab({ centerId }: { centerId: string }) {
@@ -239,7 +239,7 @@ function GalleryTab({ centerId }: { centerId: string }) {
   );
 }
 
-// â”€â”€ View Modal 2-Tab Component â”€â”€
+// ── View Modal 2-Tab Component ──
 function ViewModalTabs({ centerId }: { centerId: string }) {
   const [tab, setTab] = useState<'services' | 'gallery'>('services');
   const tabs = [
@@ -288,7 +288,7 @@ interface EyeCareCenter {
   isActive: boolean;
 }
 
-// â”€â”€ Add/Edit Modal (defined OUTSIDE page component to prevent remount on keystroke) â”€â”€
+// ── Add/Edit Modal (defined OUTSIDE page component to prevent remount on keystroke) ──
 interface ModalProps {
   title: string;
   onClose: () => void;
@@ -466,11 +466,11 @@ export default function EyeCareCentersPage() {
 
   return (
     <AdminLayout title="Eye Care Centers" action={addBtn}>
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {[
-          { label: 'Total Centers', value: centers.length, color: 'bg-blue-50 text-blue-600', icon: '👁️' },
-          { label: 'Active', value: centers.filter((c) => c.isActive).length, color: 'bg-green-50 text-green-600', icon: '✅' },
-          { label: 'Inactive', value: centers.filter((c) => !c.isActive).length, color: 'bg-gray-100 text-gray-400', icon: '⏸️' },
+          { label: 'Total Centers', value: centers.length, color: 'bg-blue-50 text-blue-600', icon: '???' },
+          { label: 'Active', value: centers.filter((c) => c.isActive).length, color: 'bg-green-50 text-green-600', icon: '?' },
+          { label: 'Inactive', value: centers.filter((c) => !c.isActive).length, color: 'bg-gray-100 text-gray-400', icon: '??' },
         ].map((s) => (
           <div key={s.label} className={`rounded-2xl p-5 flex items-center gap-4 ${s.color}`}>
             <span className="text-2xl">{s.icon}</span>
@@ -483,11 +483,19 @@ export default function EyeCareCentersPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div
+          className="overflow-x-auto"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            maxHeight: 'calc(100vh - 260px)',
+            overflowY: 'auto',
+          }}
+        >
+        <table className="w-full text-sm" style={{ minWidth: '650px' }}>
           <thead>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-gray-100 bg-white sticky top-0 z-10">
               {['Name', 'Contact', 'Location', 'Services', 'Status', 'Action'].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -499,7 +507,7 @@ export default function EyeCareCentersPage() {
               <tr key={c._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                 <td className="px-5 py-3.5 font-medium text-gray-700">{c.name}</td>
                 <td className="px-5 py-3.5 text-gray-500">{c.contact}</td>
-                <td className="px-5 py-3.5 text-gray-500 text-xs">{[c.division, c.district, c.upazila].filter(Boolean).join(' › ') || c.address}</td>
+                <td className="px-5 py-3.5 text-gray-500 text-xs">{[c.division, c.district, c.upazila].filter(Boolean).join(' � ') || c.address}</td>
                 <td className="px-5 py-3.5">
                   <div className="flex flex-wrap gap-1">
                     {c.services.slice(0, 3).map((s) => (
@@ -539,6 +547,7 @@ export default function EyeCareCentersPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showModal && <EyeCareModal title="Add Eye Care Center" onClose={() => setShowModal(false)} onSubmit={handleAdd} data={form} setData={setForm} isEdit={false} form={form} setForm={setForm} selectedServices={selectedServices} setSelectedServices={setSelectedServices} loading={loading} error={error} />}

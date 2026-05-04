@@ -144,13 +144,13 @@ export default function DepartmentsPage() {
   return (
     <AdminLayout title="Departments" action={addBtn}>
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'Total Departments', value: filteredDepartments.length, color: 'bg-blue-50 text-blue-600', icon: '🏥' },
           { label: 'Active', value: filteredDepartments.filter((d) => d.isActive).length, color: 'bg-green-50 text-green-600', icon: '✅' },
           { label: 'Inactive', value: filteredDepartments.filter((d) => !d.isActive).length, color: 'bg-red-50 text-red-600', icon: '❌' },
         ].map((s) => (
-          <div key={s.label} className={`rounded-2xl p-5 flex items-center gap-4 ${s.color}`}>
+          <div key={s.label} className={`rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 ${s.color}`}>
             <span className="text-2xl">{s.icon}</span>
             <div>
               <p className="text-2xl font-bold">{s.value}</p>
@@ -199,11 +199,19 @@ export default function DepartmentsPage() {
 
       {/* List */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div
+          className="overflow-x-auto"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            maxHeight: 'calc(100vh - 280px)',
+            overflowY: 'auto',
+          }}
+        >
+        <table className="w-full text-sm" style={{ minWidth: '550px' }}>
           <thead>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-gray-100 bg-white sticky top-0 z-10">
               {['Title', 'Description', 'Status', 'Created', 'Actions'].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -253,6 +261,7 @@ export default function DepartmentsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Add Modal */}

@@ -151,12 +151,12 @@ export default function AmbulancesPage() {
   return (
     <AdminLayout title="Ambulances" action={addBtn}>
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {statCards.map((s) => (
-          <div key={s.label} className={`rounded-2xl p-5 flex items-center gap-4 ${s.color}`}>
-            <span className="text-2xl">{s.icon}</span>
+          <div key={s.label} className={`rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 ${s.color}`}>
+            <span className="text-xl sm:text-2xl">{s.icon}</span>
             <div>
-              <p className="text-2xl font-bold">{s.value}</p>
+              <p className="text-xl sm:text-2xl font-bold">{s.value}</p>
               <p className="text-xs font-medium opacity-70">{s.label}</p>
             </div>
           </div>
@@ -165,11 +165,19 @@ export default function AmbulancesPage() {
 
       {/* List */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div
+          className="overflow-x-auto"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            maxHeight: 'calc(100vh - 260px)',
+            overflowY: 'auto',
+          }}
+        >
+        <table className="w-full text-sm" style={{ minWidth: '700px' }}>
           <thead>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-gray-100 bg-white sticky top-0 z-10">
               {['Ambulance', 'Driver', 'Phone', 'Vehicle', 'Type', 'Status', 'Action'].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -219,6 +227,7 @@ export default function AmbulancesPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* View Modal */}
@@ -278,7 +287,7 @@ export default function AmbulancesPage() {
                 {/* Basic Info */}
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Basic Info</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {([['ambulanceName', 'Ambulance Name'], ['driverName', 'Driver Name'], ['phone', 'Phone Number'], ['email', 'Email (optional)'], ['vehicleNumber', 'Vehicle Number']] as [string, string][]).map(([k, label]) => (
                       <div key={k}>
                         <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
@@ -314,7 +323,7 @@ export default function AmbulancesPage() {
                 {/* Images */}
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Images</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[['driverImage', 'Driver Image'], ['ambulanceImage', 'Ambulance Image']].map(([key, label]) => (
                       <div key={key}>
                         <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
@@ -343,7 +352,7 @@ export default function AmbulancesPage() {
                 {/* Documents */}
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Documents</p>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[['documents.drivingLicence', 'Driving Licence'], ['documents.nid', 'NID'], ['documents.carDocument', 'Car Document']].map(([key, label]) => {
                       const val = key.startsWith('documents.') ? editAmbulance.documents?.[key.split('.')[1]] : editAmbulance[key];
                       const docKey = key.split('.')[1];
@@ -404,7 +413,7 @@ export default function AmbulancesPage() {
                 {error && <p className="text-xs text-red-500 bg-red-50 px-4 py-2.5 rounded-xl">{error}</p>}
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Basic Info</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {([['ambulanceName', 'Ambulance Name', true], ['driverName', 'Driver Name', false], ['phone', 'Phone Number', true], ['email', 'Email (optional)', false], ['vehicleNumber', 'Vehicle Number', false]] as [keyof typeof emptyForm, string, boolean][]).map(([key, label, req]) => (
                       <div key={key}>
                         <label className="block text-xs font-medium text-gray-500 mb-1">{label}{req && <span className="text-red-400 ml-0.5">*</span>}</label>
@@ -426,14 +435,14 @@ export default function AmbulancesPage() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Images</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FileInput label="Driver Image" name="driverImage" />
                     <FileInput label="Ambulance Image" name="ambulanceImage" />
                   </div>
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Documents</p>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <FileInput label="Driving Licence" name="drivingLicence" />
                     <FileInput label="NID" name="nid" />
                     <FileInput label="Car Document" name="carDocument" />

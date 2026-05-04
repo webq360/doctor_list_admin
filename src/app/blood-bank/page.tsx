@@ -112,17 +112,17 @@ export default function BloodBankPage() {
   return (
     <AdminLayout title="Blood Bank" action={addBtn}>
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'Total', value: banks.length, color: 'bg-red-50 text-red-600', icon: '🩸' },
           { label: 'Active', value: banks.filter((b) => b.isActive).length, color: 'bg-green-50 text-green-600', icon: '✅' },
           { label: 'Inactive', value: banks.filter((b) => !b.isActive).length, color: 'bg-gray-100 text-gray-400', icon: '⏸️' },
           { label: 'Blood Groups', value: [...new Set(banks.flatMap((b) => b.availableGroups))].length, color: 'bg-blue-50 text-blue-600', icon: '💉' },
         ].map((s) => (
-          <div key={s.label} className={`rounded-2xl p-5 flex items-center gap-4 ${s.color}`}>
-            <span className="text-2xl">{s.icon}</span>
+          <div key={s.label} className={`rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 ${s.color}`}>
+            <span className="text-xl sm:text-2xl">{s.icon}</span>
             <div>
-              <p className="text-2xl font-bold">{s.value}</p>
+              <p className="text-xl sm:text-2xl font-bold">{s.value}</p>
               <p className="text-xs font-medium opacity-70 mt-0.5">{s.label}</p>
             </div>
           </div>
@@ -131,11 +131,19 @@ export default function BloodBankPage() {
 
       {/* List */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div
+          className="overflow-x-auto"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            maxHeight: 'calc(100vh - 260px)',
+            overflowY: 'auto',
+          }}
+        >
+        <table className="w-full text-sm" style={{ minWidth: '600px' }}>
           <thead>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-gray-100 bg-white sticky top-0 z-10">
               {['Name', 'Contact', 'Location', 'Blood Groups', 'Status', 'Action'].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -183,6 +191,7 @@ export default function BloodBankPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Add Modal */}
@@ -199,14 +208,14 @@ export default function BloodBankPage() {
               <form onSubmit={handleAdd} className="px-6 py-5 space-y-4">
                 {error && <p className="text-xs text-red-500 bg-red-50 px-4 py-2.5 rounded-xl">{error}</p>}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><label className={labelCls}>Blood Bank Name<span className="text-red-400 ml-0.5">*</span></label>
                     <input placeholder="Name" value={form.name} onChange={set('name')} required className={inputCls} /></div>
                   <div><label className={labelCls}>Contact<span className="text-red-400 ml-0.5">*</span></label>
                     <input placeholder="Phone / Email" value={form.contact} onChange={set('contact')} required className={inputCls} /></div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div><label className={labelCls}>Division</label>
                     <select value={form.division} onChange={set('division')} className={`${inputCls} text-gray-700`}>
                       <option value="">Select Division</option>
@@ -231,7 +240,7 @@ export default function BloodBankPage() {
                   <textarea placeholder="Full address" value={form.address} onChange={set('address')} required rows={2} className={`${inputCls} resize-none`} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><label className={labelCls}>Latitude (optional)</label>
                     <input placeholder="Latitude" value={form.lat} onChange={set('lat')} type="number" step="any" className={inputCls} /></div>
                   <div><label className={labelCls}>Longitude (optional)</label>
@@ -276,14 +285,14 @@ export default function BloodBankPage() {
               <form onSubmit={handleEdit} className="px-6 py-5 space-y-4">
                 {error && <p className="text-xs text-red-500 bg-red-50 px-4 py-2.5 rounded-xl">{error}</p>}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><label className={labelCls}>Name</label>
                     <input value={editBank.name} onChange={(e) => setEditBank((p: any) => ({ ...p, name: e.target.value }))} className={inputCls} /></div>
                   <div><label className={labelCls}>Contact</label>
                     <input value={editBank.contact} onChange={(e) => setEditBank((p: any) => ({ ...p, contact: e.target.value }))} className={inputCls} /></div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div><label className={labelCls}>Division</label>
                     <select value={editBank.division || ''} onChange={(e) => setEditBank((p: any) => ({ ...p, division: e.target.value, district: '', upazila: '' }))} className={`${inputCls} text-gray-700`}>
                       <option value="">Select Division</option>

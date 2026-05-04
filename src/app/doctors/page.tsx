@@ -15,6 +15,7 @@ const emptyForm = {
   experience: '', fees: '', bio: '',
   hospitalIds: [] as string[],
   departmentIds: [] as string[],
+  locations: [] as Array<{ division: string; district: string; upazila: string }>,
 };
 
 export default function DoctorsPage() {
@@ -24,7 +25,7 @@ export default function DoctorsPage() {
   const [showModal, setShowModal] = useState(false);
   const [viewDoctor, setViewDoctor] = useState<Doctor | null>(null);
   const [editDoctor, setEditDoctor] = useState<any>(null);
-  const [editTab, setEditTab] = useState(0); // 0=Details, 1=Diseases, 2=Education
+  const [editTab, setEditTab] = useState(0); // 0=Details, 1=Diseases, 2=Education/Experience
   const [form, setForm] = useState(emptyForm);
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState('');
@@ -33,6 +34,7 @@ export default function DoctorsPage() {
   const [hospitalFilter, setHospitalFilter] = useState({ division: '', district: '', upazila: '', search: '' });
   const [doctorFilter, setDoctorFilter] = useState({ 
     search: '', 
+    bmdcNumber: '',
     division: '', 
     district: '', 
     upazila: '', 
@@ -40,6 +42,8 @@ export default function DoctorsPage() {
     specialization: '', 
     status: '' 
   });
+  const [addLocationForm, setAddLocationForm] = useState({ division: '', district: '', upazila: '' });
+  const [editLocationForm, setEditLocationForm] = useState({ division: '', district: '', upazila: '' });
 
   useEffect(() => {
     api.get('/doctors/all').then((r) => setDoctors(r.data)).catch(() =>
@@ -66,10 +70,27 @@ export default function DoctorsPage() {
     // Search in doctor name
     if (doctorFilter.search && !d.userId?.name?.toLowerCase().includes(doctorFilter.search.toLowerCase())) return false;
     
-    // Filter by location
-    if (doctorFilter.division && d.location?.division !== doctorFilter.division) return false;
-    if (doctorFilter.district && d.location?.district !== doctorFilter.district) return false;
-    if (doctorFilter.upazila && d.location?.upazila !== doctorFilter.upazila) return false;
+    // Search in BMDC number
+    if (doctorFilter.bmdcNumber && !d.bmdcNumber?.toLowerCase().includes(doctorFilter.bmdcNumber.toLowerCase())) return false;
+    
+    // Filter by location - check both legacy location and locations array
+    if (doctorFilter.division || doctorFilter.district || doctorFilter.upazila) {
+      const hasMatchInLocations = (d as any).locations?.some((loc: any) => {
+        if (doctorFilter.division && loc.division !== doctorFilter.division) return false;
+        if (doctorFilter.district && loc.district !== doctorFilter.district) return false;
+        if (doctorFilter.upazila && loc.upazila !== doctorFilter.upazila) return false;
+        return true;
+      });
+      
+      const hasMatchInLegacyLocation = (() => {
+        if (doctorFilter.division && d.location?.division !== doctorFilter.division) return false;
+        if (doctorFilter.district && d.location?.district !== doctorFilter.district) return false;
+        if (doctorFilter.upazila && d.location?.upazila !== doctorFilter.upazila) return false;
+        return true;
+      })();
+      
+      if (!hasMatchInLocations && !hasMatchInLegacyLocation) return false;
+    }
     
     // Filter by hospital
     if (doctorFilter.hospital) {
@@ -119,6 +140,7 @@ export default function DoctorsPage() {
         specializations: form.specialization ? [form.specialization] : [],
         profileImage: profileImageUrl,
         bio: form.bio,
+        locations: form.locations,  // Multiple locations array
       });
       setDoctors((prev) => [...prev, data]);
       setShowModal(false);
@@ -157,10 +179,8 @@ export default function DoctorsPage() {
         newPassword: editDoctor.newPassword || undefined,
         diseasesTitle: editDoctor.diseasesTitle || '',
         diseasesDescription: editDoctor.diseasesDescription || '',
-        educationTitle: editDoctor.educationTitle || '',
-        educationDescription: editDoctor.educationDescription || '',
-        education: editDoctor.education || [],
-        workExperience: editDoctor.workExperience || [],
+        educationExperience: editDoctor.educationExperience || [],
+        locations: editDoctor.locations || [],  // Multiple locations array
       });
       setDoctors((prev) => prev.map((d) => d._id === data._id ? data : d));
       setEditDoctor(null);
@@ -205,6 +225,7 @@ export default function DoctorsPage() {
     setShowModal(true); setError(''); setForm(emptyForm);
     setProfileImage(null); setProfilePreview('');
     setHospitalFilter({ division: '', district: '', upazila: '', search: '' });
+    setAddLocationForm({ division: '', district: '', upazila: '' });
   };
 
   const addBtn = (
@@ -241,15 +262,16 @@ export default function DoctorsPage() {
       <div className="mb-4 p-4 bg-white rounded-2xl border border-gray-100">
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter Doctors</p>
         
-        {/* Search Box */}
-        <div className="mb-3">
+        {/* Search Boxes - Name and BMDC */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+          {/* Name Search */}
           <div className="relative">
             <input
               type="text"
-              placeholder="Search doctors by name..."
+              placeholder="Search by doctor name..."
               value={doctorFilter.search}
               onChange={(e) => setDoctorFilter(p => ({ ...p, search: e.target.value }))}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-400 transition-colors"
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-400 transition-colors"
             />
             <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -257,6 +279,30 @@ export default function DoctorsPage() {
             {doctorFilter.search && (
               <button
                 onClick={() => setDoctorFilter(p => ({ ...p, search: '' }))}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* BMDC Number Search */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search by BMDC number..."
+              value={doctorFilter.bmdcNumber || ''}
+              onChange={(e) => setDoctorFilter(p => ({ ...p, bmdcNumber: e.target.value }))}
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-400 transition-colors font-mono"
+            />
+            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+            </svg>
+            {doctorFilter.bmdcNumber && (
+              <button
+                onClick={() => setDoctorFilter(p => ({ ...p, bmdcNumber: '' }))}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -312,7 +358,7 @@ export default function DoctorsPage() {
           {/* Specialization Filter */}
           <input
             type="text"
-            placeholder="Specialization..."
+            placeholder="Specialist..."
             value={doctorFilter.specialization}
             onChange={(e) => setDoctorFilter(p => ({ ...p, specialization: e.target.value }))}
             className="text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400"
@@ -333,7 +379,7 @@ export default function DoctorsPage() {
 
           {/* Clear Filters Button */}
           <button
-            onClick={() => setDoctorFilter({ search: '', division: '', district: '', upazila: '', hospital: '', specialization: '', status: '' })}
+            onClick={() => setDoctorFilter({ search: '', bmdcNumber: '', division: '', district: '', upazila: '', hospital: '', specialization: '', status: '' })}
             className="text-sm px-4 py-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
           >
             Clear All
@@ -345,7 +391,7 @@ export default function DoctorsPage() {
           <p className="text-xs text-gray-500">
             Showing {filteredDoctors.length} of {doctors.length} doctors
           </p>
-          {(doctorFilter.search || doctorFilter.division || doctorFilter.district || doctorFilter.upazila || 
+          {(doctorFilter.search || doctorFilter.bmdcNumber || doctorFilter.division || doctorFilter.district || doctorFilter.upazila || 
             doctorFilter.hospital || doctorFilter.specialization || doctorFilter.status) && (
             <p className="text-xs text-blue-600">
               Filters applied
@@ -356,9 +402,16 @@ export default function DoctorsPage() {
 
       {/* List */}
       <div className="bg-white rounded-2xl border border-gray-100 w-full">
-        <div className="w-full overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div
+          className="w-full overflow-x-auto"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            maxHeight: 'calc(100vh - 280px)',
+            overflowY: 'auto',
+          }}
+        >
           <table className="w-full text-sm table-auto" style={{ minWidth: '1000px' }}>
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr className="border-b border-gray-100">
                 {['', 'Name', 'BMDC', 'Specialization', 'Departments', 'Address', 'Hospitals', 'Status', 'Popular', 'Action'].map((h) => (
                   <th key={h} className="px-3 sm:px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
@@ -398,7 +451,17 @@ export default function DoctorsPage() {
                 </td>
                 <td className="px-5 py-3.5 text-gray-500">
                   <div className="text-xs">
-                    {d.location?.division || d.location?.district || d.location?.upazila ? (
+                    {((d as any).locations && (d as any).locations.length > 0) ? (
+                      <div className="space-y-1">
+                        {(d as any).locations.map((loc: any, i: number) => (
+                          <div key={i} className="flex flex-wrap gap-1">
+                            {loc.upazila && <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-xs">{loc.upazila}</span>}
+                            {loc.district && <span className="px-1.5 py-0.5 bg-green-50 text-green-600 rounded text-xs">{loc.district}</span>}
+                            {loc.division && <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-xs">{loc.division}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (d.location?.division || d.location?.district || d.location?.upazila) ? (
                       <>
                         {d.location?.upazila && <div>{d.location.upazila}</div>}
                         {d.location?.district && <div>{d.location.district}</div>}
@@ -417,9 +480,30 @@ export default function DoctorsPage() {
                   </div>
                 </td>
                 <td className="px-5 py-3.5">
-                  <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${d.isApproved ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
-                    {d.isApproved ? 'Approved' : 'Pending'}
-                  </span>
+                  <button
+                    onClick={() => approve(d._id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      d.isApproved
+                        ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                        : 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+                    }`}
+                  >
+                    {d.isApproved ? (
+                      <>
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Approved
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                        Pending
+                      </>
+                    )}
+                  </button>
                 </td>
                 <td className="px-5 py-3.5">
                   <button
@@ -442,21 +526,10 @@ export default function DoctorsPage() {
                       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
                       View
                     </button>
-                    <button onClick={() => setEditDoctor({ ...d, specializations: d.specializations || [], departmentIds: d.departments?.map((dept: any) => typeof dept === 'string' ? dept : dept._id) || [] })}
+                    <button onClick={() => setEditDoctor({ ...d, specializations: d.specializations || [], departmentIds: d.departments?.map((dept: any) => typeof dept === 'string' ? dept : dept._id) || [], locations: (d as any).locations || [] })}
                       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors">
                       Edit
                     </button>
-                    {d.isApproved ? (
-                      <button onClick={() => approve(d._id)}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
-                        Set Pending
-                      </button>
-                    ) : (
-                      <button onClick={() => approve(d._id)}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
-                        Approve
-                      </button>
-                    )}
                     <button onClick={() => handleDelete(d._id)}
                       className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
                       Delete
@@ -472,17 +545,16 @@ export default function DoctorsPage() {
 
       {/* Add Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.4)' }}>
-          <div className="min-h-full flex items-start justify-center p-6 py-10">
-            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col" style={{ minWidth: '320px', maxHeight: '90vh' }}>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
                 <h2 className="text-base font-semibold text-gray-800">Add Doctor</h2>
                 <button onClick={() => setShowModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
 
-              <form onSubmit={handleAdd} className="px-6 py-5 space-y-5">
+              <form onSubmit={handleAdd} className="px-4 sm:px-6 py-5 space-y-5 overflow-y-auto flex-1" style={{ minWidth: '280px' }}>
                 {error && <p className="text-xs text-red-500 bg-red-50 px-4 py-2.5 rounded-xl">{error}</p>}
 
                 {/* Profile Image */}
@@ -505,12 +577,12 @@ export default function DoctorsPage() {
                 {/* Account Info */}
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Account Info</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><label className={labelCls}>Full Name<span className="text-red-400 ml-0.5">*</span></label>
                       <input placeholder="Dr. Full Name" value={form.name} onChange={set('name')} required className={inputCls} /></div>
                     <div><label className={labelCls}>Phone <span className="text-gray-400">(optional)</span></label>
                       <input placeholder="Phone number" value={form.phone} onChange={set('phone')} className={inputCls} /></div>
-                    <div className="col-span-2"><label className={labelCls}>BMDC Number <span className="text-gray-400">(optional)</span></label>
+                    <div className="col-span-1 sm:col-span-2"><label className={labelCls}>BMDC Number <span className="text-gray-400">(optional)</span></label>
                       <input placeholder="BMDC Registration Number" value={form.bmdcNumber} onChange={set('bmdcNumber')} className={inputCls} /></div>
                   </div>
                 </div>
@@ -531,11 +603,91 @@ export default function DoctorsPage() {
                 {/* Professional Info */}
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Professional Info</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><label className={labelCls}>Experience (years)</label>
                       <input type="number" placeholder="0" value={form.experience} onChange={set('experience')} min="0" className={inputCls} /></div>
                     <div><label className={labelCls}>Consultation Fee (৳)<span className="text-red-400 ml-0.5">*</span></label>
                       <input type="number" placeholder="500" value={form.fees} onChange={set('fees')} required min="0" className={inputCls} /></div>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Locations</p>
+                  
+                  {/* Location List */}
+                  {form.locations.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      {form.locations.map((loc, i) => (
+                        <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                          <div className="flex-1 text-xs text-gray-700">
+                            {[loc.division, loc.district, loc.upazila].filter(Boolean).join(' › ')}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setForm(p => ({ ...p, locations: p.locations.filter((_, idx) => idx !== i) }))}
+                            className="text-red-500 hover:text-red-700 text-lg font-bold"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add New Location */}
+                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-3">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Add Location</p>
+                    <div className="grid grid-cols-3 gap-2 mb-2">
+                      <div>
+                        <select 
+                          value={addLocationForm.division}
+                          onChange={(e) => setAddLocationForm({ division: e.target.value, district: '', upazila: '' })}
+                          className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400"
+                        >
+                          <option value="">Select Division</option>
+                          {DIVISIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <select 
+                          value={addLocationForm.district}
+                          onChange={(e) => setAddLocationForm(p => ({ ...p, district: e.target.value, upazila: '' }))}
+                          disabled={!addLocationForm.division}
+                          className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select District</option>
+                          {addLocationForm.division && getDistricts(addLocationForm.division).map((d) => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <select 
+                          value={addLocationForm.upazila}
+                          onChange={(e) => setAddLocationForm(p => ({ ...p, upazila: e.target.value }))}
+                          disabled={!addLocationForm.district}
+                          className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select Upazila</option>
+                          {addLocationForm.district && getUpazilas(addLocationForm.division, addLocationForm.district).map((u) => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (addLocationForm.division || addLocationForm.district || addLocationForm.upazila) {
+                          setForm(p => ({ 
+                            ...p, 
+                            locations: [...p.locations, { ...addLocationForm }] 
+                          }));
+                          setAddLocationForm({ division: '', district: '', upazila: '' });
+                        }
+                      }}
+                      className="w-full py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" 
+                      style={{ background: '#2B3EE6' }}
+                    >
+                      Add Location
+                    </button>
                   </div>
                 </div>
 
@@ -728,7 +880,6 @@ export default function DoctorsPage() {
                 </div>
               </form>
             </div>
-          </div>
         </div>
       )}
 
@@ -745,28 +896,25 @@ export default function DoctorsPage() {
               departmentIds: d.departments?.map((dept: any) => typeof dept === 'string' ? dept : dept._id) || [],
               diseasesTitle: (d as any).diseasesTitle || '',
               diseasesDescription: (d as any).diseasesDescription || '',
-              educationTitle: (d as any).educationTitle || '',
-              educationDescription: (d as any).educationDescription || '',
-              education: (d as any).education || [],
-              workExperience: (d as any).workExperience || []
+              educationExperience: (d as any).educationExperience || [],
+              locations: (d as any).locations || [],
             }); 
           }} 
         />
       )}
       {/* Edit Modal */}
       {editDoctor && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.4)' }}>
-          <div className="min-h-full flex items-start justify-center p-6 py-10">
-            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col" style={{ minWidth: '320px', maxHeight: '90vh' }}>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
                 <h2 className="text-base font-semibold text-gray-800">Edit Doctor</h2>
-                <button onClick={() => { setEditDoctor(null); setEditTab(0); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">
+                <button onClick={() => { setEditDoctor(null); setEditTab(0); setEditLocationForm({ division: '', district: '', upazila: '' }); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
 
               {/* Tab Bar */}
-              <div className="px-6 pt-4 pb-3">
+              <div className="px-6 pt-4 pb-3 flex-shrink-0">
                 <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
                   <button
                     type="button"
@@ -798,7 +946,7 @@ export default function DoctorsPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleEdit} className="px-6 py-5 space-y-5">
+              <form onSubmit={handleEdit} className="px-4 sm:px-6 py-5 space-y-5 overflow-y-auto flex-1" style={{ minWidth: '280px' }}>
                 {error && <p className="text-xs text-red-500 bg-red-50 px-4 py-2.5 rounded-xl">{error}</p>}
 
                 {/* Details Tab */}
@@ -824,16 +972,13 @@ export default function DoctorsPage() {
                 {/* Account Info */}
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Account Info</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><label className={labelCls}>Full Name<span className="text-red-400 ml-0.5">*</span></label>
                       <input value={editDoctor.userId?.name || ''} onChange={(e) => setEditDoctor((p: any) => ({ ...p, userId: { ...p.userId, name: e.target.value } }))} required className={inputCls} /></div>
                     <div><label className={labelCls}>Phone <span className="text-gray-400">(optional)</span></label>
                       <input value={editDoctor.userId?.phone || ''} onChange={(e) => setEditDoctor((p: any) => ({ ...p, userId: { ...p.userId, phone: e.target.value } }))} className={inputCls} /></div>
-                    <div className="col-span-2"><label className={labelCls}>BMDC Number <span className="text-gray-400">(optional)</span></label>
+                    <div className="col-span-1 sm:col-span-2"><label className={labelCls}>BMDC Number <span className="text-gray-400">(optional)</span></label>
                       <input placeholder="BMDC Registration Number" value={editDoctor.bmdcNumber || ''} onChange={(e) => setEditDoctor((p: any) => ({ ...p, bmdcNumber: e.target.value }))} className={inputCls} /></div>
-                    <div className="col-span-2"><label className={labelCls}>New Password <span className="text-gray-400">(optional)</span></label>
-                      <input type="password" placeholder="Leave blank to keep current" minLength={6}
-                        onChange={(e) => setEditDoctor((p: any) => ({ ...p, newPassword: e.target.value }))} className={inputCls} /></div>
                   </div>
                 </div>
 
@@ -850,24 +995,133 @@ export default function DoctorsPage() {
 
                 {/* About Doctor/Degree */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor/Degree</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">About Doctor/Degree</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const textarea = document.getElementById('edit-bio') as HTMLTextAreaElement;
+                        if (!textarea) return;
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        const selectedText = textarea.value.substring(start, end);
+                        if (selectedText) {
+                          const newText = textarea.value.substring(0, start) + `<b>${selectedText}</b>` + textarea.value.substring(end);
+                          setEditDoctor((p: any) => ({ ...p, bio: newText }));
+                          setTimeout(() => {
+                            textarea.focus();
+                            textarea.setSelectionRange(start, end + 7);
+                          }, 0);
+                        }
+                      }}
+                      className="px-3 py-1 text-xs font-bold bg-gray-100 hover:bg-gray-200 rounded-lg"
+                      title="Select text and click to make it bold"
+                    >
+                      <b>B</b>
+                    </button>
+                  </div>
                   <textarea 
-                    placeholder="Short bio about the doctor or degree information..." 
+                    id="edit-bio"
+                    placeholder="Short bio about the doctor or degree information. Select text and click B to make it bold." 
                     value={editDoctor.bio || ''} 
                     onChange={(e) => setEditDoctor((p: any) => ({ ...p, bio: e.target.value }))} 
                     rows={3}
-                    className={`${inputCls} resize-none`} 
+                    className={`${inputCls} resize-none font-mono text-xs`} 
                   />
+                  <p className="text-xs text-gray-400 mt-1">Tip: Select text and click the B button to make it bold</p>
                 </div>
 
                 {/* Professional Info */}
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Professional Info</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><label className={labelCls}>Experience (years)</label>
                       <input type="number" value={editDoctor.experience} onChange={(e) => setEditDoctor((p: any) => ({ ...p, experience: e.target.value }))} min="0" className={inputCls} /></div>
                     <div><label className={labelCls}>Consultation Fee (৳)<span className="text-red-400 ml-0.5">*</span></label>
                       <input type="number" value={editDoctor.fees} onChange={(e) => setEditDoctor((p: any) => ({ ...p, fees: e.target.value }))} required min="0" className={inputCls} /></div>
+                  </div>
+                </div>
+
+                {/* Locations */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Locations</p>
+                  
+                  {/* Location List */}
+                  {editDoctor.locations && editDoctor.locations.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      {editDoctor.locations.map((loc: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                          <div className="flex-1 text-xs text-gray-700">
+                            {[loc.division, loc.district, loc.upazila].filter(Boolean).join(' › ')}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setEditDoctor((p: any) => ({ 
+                              ...p, 
+                              locations: p.locations.filter((_: any, idx: number) => idx !== i) 
+                            }))}
+                            className="text-red-500 hover:text-red-700 text-lg font-bold"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add New Location */}
+                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-3">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Add Location</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+                      <div>
+                        <select 
+                          value={editLocationForm.division}
+                          onChange={(e) => setEditLocationForm({ division: e.target.value, district: '', upazila: '' })}
+                          className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400"
+                        >
+                          <option value="">Select Division</option>
+                          {DIVISIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <select 
+                          value={editLocationForm.district}
+                          onChange={(e) => setEditLocationForm(p => ({ ...p, district: e.target.value, upazila: '' }))}
+                          disabled={!editLocationForm.division}
+                          className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select District</option>
+                          {editLocationForm.division && getDistricts(editLocationForm.division).map((d) => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <select 
+                          value={editLocationForm.upazila}
+                          onChange={(e) => setEditLocationForm(p => ({ ...p, upazila: e.target.value }))}
+                          disabled={!editLocationForm.district}
+                          className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <option value="">Select Upazila</option>
+                          {editLocationForm.district && getUpazilas(editLocationForm.division, editLocationForm.district).map((u) => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editLocationForm.division || editLocationForm.district || editLocationForm.upazila) {
+                          setEditDoctor((p: any) => ({ 
+                            ...p, 
+                            locations: [...(p.locations || []), { ...editLocationForm }] 
+                          }));
+                          setEditLocationForm({ division: '', district: '', upazila: '' });
+                        }
+                      }}
+                      className="w-full py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" 
+                      style={{ background: '#2B3EE6' }}
+                    >
+                      Add Location
+                    </button>
                   </div>
                 </div>
 
@@ -1054,11 +1308,6 @@ export default function DoctorsPage() {
                   )}
                 </div>
 
-                {/* About */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">About Doctor</p>
-                  <textarea placeholder="Short bio about the doctor..." value={editDoctor.bio || ''} onChange={(e) => setEditDoctor((p: any) => ({ ...p, bio: e.target.value }))} rows={3} className={`${inputCls} resize-none`} />
-                </div>
                   </>
                 )}
 
@@ -1134,195 +1383,36 @@ export default function DoctorsPage() {
                 {/* Education/Experience Tab */}
                 {editTab === 2 && (
                   <>
-                    {/* Education/Experience Information */}
                     <div>
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Education/Experience Information</p>
                       
-                      {/* Title */}
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., My Education & Experience"
-                          value={editDoctor.educationTitle || ''} 
-                          onChange={(e) => setEditDoctor((p: any) => ({ ...p, educationTitle: e.target.value }))} 
-                          className={inputCls} 
-                        />
-                      </div>
-
-                      {/* Description with Bold Button */}
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label className="block text-sm font-medium text-gray-700">Description</label>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const textarea = document.getElementById('education-desc') as HTMLTextAreaElement;
-                              if (!textarea) return;
-                              const start = textarea.selectionStart;
-                              const end = textarea.selectionEnd;
-                              const selectedText = textarea.value.substring(start, end);
-                              if (selectedText) {
-                                const newText = textarea.value.substring(0, start) + `<b>${selectedText}</b>` + textarea.value.substring(end);
-                                setEditDoctor((p: any) => ({ ...p, educationDescription: newText }));
-                                setTimeout(() => {
-                                  textarea.focus();
-                                  textarea.setSelectionRange(start, end + 7);
-                                }, 0);
-                              }
-                            }}
-                            className="px-3 py-1 text-xs font-bold bg-gray-200 hover:bg-gray-300 rounded"
-                          >
-                            B
-                          </button>
-                        </div>
-                        <textarea
-                          id="education-desc"
-                          placeholder="Describe your education and experience. Select text and click B to make it bold."
-                          value={editDoctor.educationDescription || ''} 
-                          onChange={(e) => setEditDoctor((p: any) => ({ ...p, educationDescription: e.target.value }))} 
-                          rows={8} 
-                          className={`${inputCls} resize-none font-mono text-xs`} 
-                        />
-                      </div>
-
-                      {/* Preview */}
-                      {editDoctor.educationDescription && (
-                        <div className="mt-3">
-                          <p className="text-xs font-medium text-gray-500 mb-2">Preview:</p>
-                          <div 
-                            className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-sm text-gray-700 whitespace-pre-wrap"
-                            dangerouslySetInnerHTML={{ __html: editDoctor.educationDescription }}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Education Section */}
-                    <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 mt-6">Education History</p>
-                      
-                      {/* Education List */}
-                      {editDoctor.education && editDoctor.education.length > 0 && (
-                        <div className="space-y-2 mb-3">
-                          {editDoctor.education.map((edu: any, i: number) => (
-                            <div key={i} className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
-                              <div className="flex items-start gap-3">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-                                  </svg>
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-sm font-bold text-gray-800">{edu.degree}</p>
-                                  <p className="text-sm text-gray-600 mt-0.5">{edu.institution}</p>
-                                  <p className="text-xs text-gray-400 mt-1">{edu.year}</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditDoctor((p: any) => ({
-                                      ...p,
-                                      education: p.education.filter((_: any, idx: number) => idx !== i)
-                                    }));
-                                  }}
-                                  className="text-red-500 hover:text-red-700 text-sm font-bold"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Add New Education */}
-                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-4">
-                        <p className="text-xs font-medium text-gray-500 mb-3">Add Education Entry</p>
-                        <div className="space-y-2">
-                          <div>
-                            <label className={labelCls}>Degree</label>
-                            <input 
-                              type="text"
-                              id="edu-degree"
-                              placeholder="e.g., MBBS"
-                              className={inputCls} 
-                            />
-                          </div>
-                          <div>
-                            <label className={labelCls}>Institution</label>
-                            <input 
-                              type="text"
-                              id="edu-institution"
-                              placeholder="e.g., Dhaka Medical College"
-                              className={inputCls} 
-                            />
-                          </div>
-                          <div>
-                            <label className={labelCls}>Year</label>
-                            <input 
-                              type="text"
-                              id="edu-year"
-                              placeholder="e.g., 2015"
-                              className={inputCls} 
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const degree = (document.getElementById('edu-degree') as HTMLInputElement).value.trim();
-                              const institution = (document.getElementById('edu-institution') as HTMLInputElement).value.trim();
-                              const year = (document.getElementById('edu-year') as HTMLInputElement).value.trim();
-                              
-                              if (degree && institution && year) {
-                                setEditDoctor((p: any) => ({
-                                  ...p,
-                                  education: [...(p.education || []), { degree, institution, year }]
-                                }));
-                                (document.getElementById('edu-degree') as HTMLInputElement).value = '';
-                                (document.getElementById('edu-institution') as HTMLInputElement).value = '';
-                                (document.getElementById('edu-year') as HTMLInputElement).value = '';
-                              }
-                            }}
-                            className="w-full py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90" 
-                            style={{ background: '#2B3EE6' }}
-                          >
-                            Add Education
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Experience Section */}
-                    <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Work Experience</p>
-                      
-                      {/* Experience List */}
-                      {editDoctor.workExperience && editDoctor.workExperience.length > 0 && (
-                        <div className="space-y-2 mb-3">
-                          {editDoctor.workExperience.map((exp: any, i: number) => (
+                      {/* Education/Experience List */}
+                      {editDoctor.educationExperience && editDoctor.educationExperience.length > 0 && (
+                        <div className="space-y-3 mb-4">
+                          {editDoctor.educationExperience.map((edu: any, i: number) => (
                             <div key={i} className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
                               <div className="flex items-start gap-3">
                                 <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                                   <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                                   </svg>
                                 </div>
                                 <div className="flex-1">
-                                  <p className="text-sm font-bold text-gray-800">{exp.position}</p>
-                                  <p className="text-sm text-gray-600 mt-0.5">{exp.organization}</p>
-                                  <p className="text-xs text-gray-400 mt-1">{exp.duration}</p>
+                                  <p className="text-sm font-bold text-gray-800">{edu.title}</p>
+                                  <div 
+                                    className="text-xs text-gray-600 mt-1 whitespace-pre-wrap"
+                                    dangerouslySetInnerHTML={{ __html: edu.description }}
+                                  />
                                 </div>
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setEditDoctor((p: any) => ({
                                       ...p,
-                                      workExperience: p.workExperience.filter((_: any, idx: number) => idx !== i)
+                                      educationExperience: p.educationExperience.filter((_: any, idx: number) => idx !== i)
                                     }));
                                   }}
-                                  className="text-red-500 hover:text-red-700 text-sm font-bold"
+                                  className="text-red-500 hover:text-red-700 text-lg font-bold"
                                 >
                                   ×
                                 </button>
@@ -1332,60 +1422,77 @@ export default function DoctorsPage() {
                         </div>
                       )}
 
-                      {/* Add New Experience */}
+                      {/* Add New Education/Experience Entry */}
                       <div className="border-2 border-dashed border-gray-200 rounded-xl p-4">
-                        <p className="text-xs font-medium text-gray-500 mb-3">Add Experience Entry</p>
-                        <div className="space-y-2">
-                          <div>
-                            <label className={labelCls}>Position</label>
-                            <input 
-                              type="text"
-                              id="exp-position"
-                              placeholder="e.g., Senior Consultant"
-                              className={inputCls} 
-                            />
-                          </div>
-                          <div>
-                            <label className={labelCls}>Organization</label>
-                            <input 
-                              type="text"
-                              id="exp-organization"
-                              placeholder="e.g., Square Hospital"
-                              className={inputCls} 
-                            />
-                          </div>
-                          <div>
-                            <label className={labelCls}>Duration</label>
-                            <input 
-                              type="text"
-                              id="exp-duration"
-                              placeholder="e.g., 2018 - Present"
-                              className={inputCls} 
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const position = (document.getElementById('exp-position') as HTMLInputElement).value.trim();
-                              const organization = (document.getElementById('exp-organization') as HTMLInputElement).value.trim();
-                              const duration = (document.getElementById('exp-duration') as HTMLInputElement).value.trim();
-                              
-                              if (position && organization && duration) {
-                                setEditDoctor((p: any) => ({
-                                  ...p,
-                                  workExperience: [...(p.workExperience || []), { position, organization, duration }]
-                                }));
-                                (document.getElementById('exp-position') as HTMLInputElement).value = '';
-                                (document.getElementById('exp-organization') as HTMLInputElement).value = '';
-                                (document.getElementById('exp-duration') as HTMLInputElement).value = '';
-                              }
-                            }}
-                            className="w-full py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90" 
-                            style={{ background: '#2B3EE6' }}
-                          >
-                            Add Experience
-                          </button>
+                        <p className="text-xs font-medium text-gray-500 mb-3">Add Education/Experience Entry</p>
+                        
+                        {/* Title */}
+                        <div className="mb-3">
+                          <label className={labelCls}>Title</label>
+                          <input 
+                            type="text"
+                            id="edu-exp-title"
+                            placeholder="e.g., My Education & Experience"
+                            className={inputCls} 
+                          />
                         </div>
+
+                        {/* Description with Bold Button */}
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <label className={labelCls}>Description</label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const textarea = document.getElementById('edu-exp-desc') as HTMLTextAreaElement;
+                                if (!textarea) return;
+                                const start = textarea.selectionStart;
+                                const end = textarea.selectionEnd;
+                                const selectedText = textarea.value.substring(start, end);
+                                if (selectedText) {
+                                  const newText = textarea.value.substring(0, start) + `<b>${selectedText}</b>` + textarea.value.substring(end);
+                                  textarea.value = newText;
+                                  setTimeout(() => {
+                                    textarea.focus();
+                                    textarea.setSelectionRange(start, end + 7);
+                                  }, 0);
+                                }
+                              }}
+                              className="px-3 py-1 text-xs font-bold bg-gray-100 hover:bg-gray-200 rounded-lg"
+                              title="Select text and click to make it bold"
+                            >
+                              <b>B</b>
+                            </button>
+                          </div>
+                          <textarea 
+                            id="edu-exp-desc"
+                            placeholder="Describe education and experience. Select text and click B to make it bold."
+                            rows={6} 
+                            className={`${inputCls} resize-none font-mono text-xs`} 
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Tip: Select text and click the B button to make it bold</p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const title = (document.getElementById('edu-exp-title') as HTMLInputElement).value.trim();
+                            const description = (document.getElementById('edu-exp-desc') as HTMLTextAreaElement).value.trim();
+                            
+                            if (title && description) {
+                              setEditDoctor((p: any) => ({
+                                ...p,
+                                educationExperience: [...(p.educationExperience || []), { title, description }]
+                              }));
+                              (document.getElementById('edu-exp-title') as HTMLInputElement).value = '';
+                              (document.getElementById('edu-exp-desc') as HTMLTextAreaElement).value = '';
+                            }
+                          }}
+                          className="w-full py-2.5 rounded-xl text-sm font-medium text-white hover:opacity-90" 
+                          style={{ background: '#2B3EE6' }}
+                        >
+                          Add Entry
+                        </button>
                       </div>
                     </div>
                   </>
@@ -1395,11 +1502,10 @@ export default function DoctorsPage() {
                   <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-60 hover:opacity-90" style={{ background: '#2B3EE6' }}>
                     {loading ? 'Saving...' : 'Save Changes'}
                   </button>
-                  <button type="button" onClick={() => setEditDoctor(null)} className="px-6 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-gray-100">Cancel</button>
+                  <button type="button" onClick={() => { setEditDoctor(null); setEditLocationForm({ division: '', district: '', upazila: '' }); }} className="px-6 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-gray-100">Cancel</button>
                 </div>
               </form>
             </div>
-          </div>
         </div>
       )}
     </AdminLayout>

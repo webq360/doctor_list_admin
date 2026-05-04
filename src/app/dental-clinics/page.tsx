@@ -586,7 +586,7 @@ export default function DentalClinicsPage() {
 
   return (
     <AdminLayout title="Dental Clinics" action={addBtn}>
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {[{ label: 'Total Clinics', value: centers.length, color: 'bg-cyan-50 text-cyan-600', icon: '🦷' },
           { label: 'With Logo', value: centers.filter((c) => c.logo).length, color: 'bg-blue-50 text-blue-600', icon: '🖼️' },
           { label: 'With Cover', value: centers.filter((c) => c.coverImage).length, color: 'bg-purple-50 text-purple-600', icon: '📸' }]
@@ -599,10 +599,11 @@ export default function DentalClinicsPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <table className="w-full text-sm" style={{ minWidth: '550px' }}>
           <thead><tr className="border-b border-gray-100">
             {['', 'Name', 'Contact', 'Location', 'Action'].map((h) => (
-              <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+              <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
             ))}
           </tr></thead>
           <tbody>

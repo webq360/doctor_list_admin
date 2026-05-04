@@ -81,7 +81,7 @@ export default function SettingsPage() {
               <label className={labelCls}>Full Name</label>
               <input value={profile.name} onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))} placeholder="Your name" required className={inputCls} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Email</label>
                 <input value={profile.email} onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))} placeholder="Email address" type="email" required className={inputCls} />
@@ -121,7 +121,7 @@ export default function SettingsPage() {
               <label className={labelCls}>Current Password</label>
               <input value={passwords.currentPassword} onChange={(e) => setPasswords((p) => ({ ...p, currentPassword: e.target.value }))} type="password" placeholder="Enter current password" required className={inputCls} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>New Password</label>
                 <input value={passwords.newPassword} onChange={(e) => setPasswords((p) => ({ ...p, newPassword: e.target.value }))} type="password" placeholder="New password" required className={inputCls} />

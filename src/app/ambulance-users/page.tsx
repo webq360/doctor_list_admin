@@ -50,7 +50,7 @@ export default function AmbulanceUsersPage() {
   return (
     <AdminLayout title="Ambulance Users" action={addBtn}>
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'Total Users', value: users.length, color: 'bg-blue-50 text-blue-600' },
           { label: 'Active', value: users.filter((u) => u.isActive).length, color: 'bg-green-50 text-green-600' },
@@ -90,11 +90,19 @@ export default function AmbulanceUsersPage() {
 
       {/* Users List */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div
+          className="overflow-x-auto"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            maxHeight: 'calc(100vh - 260px)',
+            overflowY: 'auto',
+          }}
+        >
+        <table className="w-full text-sm" style={{ minWidth: '500px' }}>
           <thead>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-gray-100 bg-white sticky top-0 z-10">
               {['Name', 'Email', 'Phone', 'Status', 'Action'].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -122,6 +130,7 @@ export default function AmbulanceUsersPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </AdminLayout>
   );

@@ -449,7 +449,7 @@ export default function DrugRehabilitationCentersPage() {
   return (
     <AdminLayout title="Drug Rehabilitation Centers" action={addBtn}>
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'Total Centers', value: centers.length, color: 'bg-purple-50 text-purple-600', icon: '🏥' },
           { label: 'Active', value: centers.filter((c) => c.isActive).length, color: 'bg-green-50 text-green-600', icon: '✅' },
@@ -467,11 +467,12 @@ export default function DrugRehabilitationCentersPage() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <table className="w-full text-sm" style={{ minWidth: '650px' }}>
           <thead>
             <tr className="border-b border-gray-100">
               {['Name', 'Contact', 'Location', 'Services', 'Status', 'Action'].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -527,6 +528,7 @@ export default function DrugRehabilitationCentersPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Add Modal */}

@@ -101,13 +101,13 @@ export default function AppointmentsPage() {
   return (
     <AdminLayout title="Appointments">
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
         {stats.map((s) => (
-          <div key={s.label} className={`rounded-2xl p-4 flex items-center gap-3 ${s.color}`}>
-            <span className="text-xl">{s.icon}</span>
+          <div key={s.label} className={`rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3 ${s.color}`}>
+            <span className="text-lg sm:text-xl">{s.icon}</span>
             <div>
-              <p className="text-xl font-bold">{s.value}</p>
-              <p className="text-xs font-medium opacity-70">{s.label}</p>
+              <p className="text-lg sm:text-xl font-bold">{s.value}</p>
+              <p className="text-xs font-medium opacity-70 leading-tight">{s.label}</p>
             </div>
           </div>
         ))}
@@ -115,7 +115,7 @@ export default function AppointmentsPage() {
 
       {/* Search and Filters */}
       <div className="mb-4 p-4 bg-white rounded-2xl border border-gray-100">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {/* Search */}
           <div className="relative">
             <input
@@ -181,11 +181,19 @@ export default function AppointmentsPage() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div
+          className="overflow-x-auto"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            maxHeight: 'calc(100vh - 320px)',
+            overflowY: 'auto',
+          }}
+        >
+        <table className="w-full text-sm" style={{ minWidth: '700px' }}>
           <thead>
-            <tr className="border-b border-gray-100">
+            <tr className="border-b border-gray-100 bg-white sticky top-0 z-10">
               {['Patient', 'Doctor', 'Hospital', 'Date', 'Time', 'Status', 'Action'].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -238,9 +246,8 @@ export default function AppointmentsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
-
-      {/* View Modal */}
       {viewAppointment && (
         <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.4)' }}>
           <div className="min-h-full flex items-center justify-center p-6">
@@ -261,7 +268,7 @@ export default function AppointmentsPage() {
                 {/* Appointment Booker Info */}
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Appointment Booked By</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
                       <div className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 text-gray-700">

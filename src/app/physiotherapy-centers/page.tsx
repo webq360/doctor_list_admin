@@ -568,7 +568,7 @@ export default function PhysiotherapyCentersPage() {
 
   return (
     <AdminLayout title="Physiotherapy Centers" action={addBtn}>
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {[{ label: 'Total Centers', value: centers.length, color: 'bg-green-50 text-green-600', icon: '🦿' },
           { label: 'With Logo', value: centers.filter((c) => c.logo).length, color: 'bg-blue-50 text-blue-600', icon: '🖼️' },
           { label: 'With Cover', value: centers.filter((c) => c.coverImage).length, color: 'bg-purple-50 text-purple-600', icon: '📸' }]

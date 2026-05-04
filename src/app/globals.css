@@ -6,26 +6,48 @@
   box-sizing: border-box;
 }
 
-/* Responsive Table Wrapper */
-@layer utilities {
-  .responsive-table-wrapper {
-    @apply w-full overflow-x-auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .responsive-table {
-    @apply w-full min-w-max;
-  }
-  
-  /* Prevent layout shift on zoom */
-  .no-layout-shift {
-    @apply max-w-full overflow-x-auto;
-  }
+html, body {
+  width: 100%;
 }
 
-/* Ensure body doesn't overflow */
-body {
-  overflow-x: hidden;
-  width: 100%;
-  max-width: 100vw;
+/* ── Always-visible scrollbar for modal forms ── */
+.modal-scroll::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.modal-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 99px;
+}
+.modal-scroll::-webkit-scrollbar-thumb {
+  background: #c7c7c7;
+  border-radius: 99px;
+}
+.modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
+/* Firefox */
+.modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #c7c7c7 #f1f1f1;
+}
+
+/* ── Always-visible scrollbar for tables ── */
+.table-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.table-scroll::-webkit-scrollbar-track {
+  background: #f8f8f8;
+  border-radius: 99px;
+}
+.table-scroll::-webkit-scrollbar-thumb {
+  background: #d1d1d1;
+  border-radius: 99px;
+}
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
+.table-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d1d1 #f8f8f8;
 }

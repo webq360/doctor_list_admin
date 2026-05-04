@@ -191,9 +191,9 @@ export default function NotificationsPage() {
 
   return (
     <AdminLayout title="Notifications">
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Send Form */}
-        <div className="col-span-1">
+        <div className="lg:col-span-1">
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
             <h2 className="text-sm font-semibold text-gray-800 mb-4">Send Notification</h2>
             <NotifForm
@@ -216,7 +216,7 @@ export default function NotificationsPage() {
         </div>
 
         {/* History */}
-        <div className="col-span-2">
+        <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100">
               <h2 className="text-sm font-semibold text-gray-800">Notification History</h2>

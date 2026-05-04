@@ -946,7 +946,7 @@ export default function HospitalsPage() {
   return (
     <AdminLayout title="Hospital" action={addBtn}>
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6" suppressHydrationWarning>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6" suppressHydrationWarning>
         {[
           { label: 'Total Hospitals', value: hospitals.length, color: 'bg-blue-50 text-blue-600', icon: '🏥' },
           { label: 'With Contact', value: hospitals.filter((h) => (h as any).contactMobile).length, color: 'bg-green-50 text-green-600', icon: '📞' },
