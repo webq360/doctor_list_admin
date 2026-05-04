@@ -5,6 +5,7 @@ export interface User {
   phone: string;
   role: 'patient' | 'doctor' | 'admin' | 'ambulance_user';
   isActive: boolean;
+  profileImage?: string;
 }
 
 export interface AmbulanceRequest {

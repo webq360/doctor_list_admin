@@ -335,7 +335,7 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
     setOurServicesSaved(false);
     fetchItems(hospitalId, tab);
     if (tab === 'doctors') api.get('/doctors').then((r) => setAllItems(r.data)).catch(() => {});
-    else if (tab === 'ambulances') api.get('/ambulance').then((r) => setAllItems(r.data)).catch(() => {});
+    else if (tab === 'ambulances') api.get('/hospital-ambulance-users').then((r) => setAllItems(r.data)).catch(() => {});
   }, [tab, hospitalId]);
 
   const handleSaveOurServices = async () => {
@@ -417,11 +417,20 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
   const handleAdd = async () => {
     if (!selected) return;
     setLoading(true);
-    const key = tab === 'doctors' ? 'doctorId' : 'ambulanceId';
-    await api.post(`/hospitals/${hospitalId}/${tab}`, { [key]: selected });
-    setSelected('');
-    fetchItems(hospitalId, tab);
-    setLoading(false);
+    try {
+      let key = 'serviceId';
+      if (tab === 'doctors') key = 'doctorId';
+      else if (tab === 'ambulances') key = 'hospitalAmbulanceUserId'; // Hospital Ambulance User ID
+      
+      await api.post(`/hospitals/${hospitalId}/${tab}`, { [key]: selected });
+      setSelected('');
+      fetchItems(hospitalId, tab);
+    } catch (err: any) {
+      console.error('Error adding item:', err.response?.data || err.message);
+      alert(`Failed to add: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRemove = async (itemId: string) => {
@@ -667,10 +676,10 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
       <div className="flex gap-2">
         <select value={selected} onChange={(e) => setSelected(e.target.value)}
           className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors text-gray-700">
-          <option value="">Select {tab === 'doctors' ? 'Doctor' : 'Ambulance'}</option>
+          <option value="">Select {tab === 'doctors' ? 'Doctor' : 'Hospital Ambulance User'}</option>
           {available.map((i) => (
             <option key={i._id} value={i._id}>
-              {tab === 'doctors' ? `${i.userId?.name || 'Unknown'} — ${i.specialization}` : `${i.ambulanceName} (${i.vehicleNumber})`}
+              {tab === 'doctors' ? `${i.userId?.name || 'Unknown'} — ${i.specialization}` : `${i.name || 'Unknown'} (${i.phone})`}
             </option>
           ))}
         </select>
@@ -685,7 +694,7 @@ function HospitalTabContent({ hospitalId, tab }: { hospitalId: string; tab: 'doc
             <div className="flex items-center justify-between px-4 py-3">
               <div>
                 {tab === 'doctors' && <p className="text-sm font-medium text-gray-700">{item.userId?.name || 'Unknown'} <span className="text-xs text-gray-400 ml-1">{item.specialization}</span></p>}
-                {tab === 'ambulances' && <p className="text-sm font-medium text-gray-700">{item.ambulanceName} <span className="text-xs text-gray-400 ml-1">{item.vehicleNumber}</span></p>}
+                {tab === 'ambulances' && <p className="text-sm font-medium text-gray-700">{item.driverName || 'Unknown'} <span className="text-xs text-gray-400 ml-1">{item.phone}</span></p>}
               </div>
               <div className="flex items-center gap-2">
                 {tab === 'doctors' && (
@@ -1090,13 +1099,14 @@ export default function HospitalsPage() {
                     : (h as any).contactMobile || '-'}
                 </td>
                 <td className="px-5 py-3.5">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${
-                    h.status === 'paused' 
-                      ? 'bg-gray-100 text-gray-600' 
-                      : 'bg-green-50 text-green-600'
-                  }`}>
-                    {h.status === 'paused' ? '⏸ Paused' : '✓ Active'}
-                  </span>
+                  <button onClick={() => toggleStatus(h._id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      h.status === 'paused' 
+                        ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' 
+                        : 'bg-green-50 text-green-600 hover:bg-green-100'
+                    }`}>
+                    {h.status === 'paused' ? '⏳ Pending' : '✓ Approved'}
+                  </button>
                 </td>
                 <td className="px-5 py-3.5">
                   <button
@@ -1118,15 +1128,6 @@ export default function HospitalsPage() {
                     <button onClick={() => { setViewTab('details'); setViewHospital(h); }}
                       className="text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
                       View
-                    </button>
-                    <button 
-                      onClick={() => toggleStatus(h._id)}
-                      className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                        h.status === 'paused'
-                          ? 'bg-green-50 text-green-600 hover:bg-green-100'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}>
-                      {h.status === 'paused' ? 'Resume' : 'Pause'}
                     </button>
                     <button onClick={() => { 
                       const contacts = (h as any).contactPersons && (h as any).contactPersons.length > 0 
@@ -1394,6 +1395,11 @@ export default function HospitalsPage() {
                 </button>
               </div>
 
+              {/* Title Section */}
+              <div className="px-6 py-3 bg-blue-50 border-b border-blue-100">
+                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">View - Hospital And Edit</p>
+              </div>
+
               {/* Tabs */}
               <div className="flex gap-1 px-6 pt-4">
                 {(['details', 'doctors', 'ambulances', 'services'] as const).map((t) => (
@@ -1577,7 +1583,7 @@ export default function HospitalsPage() {
           <div className="min-h-full flex items-start justify-center p-6 py-10">
             <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl">
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h2 className="text-base font-semibold text-gray-800">Edit Hospital</h2>
+                <h2 className="text-base font-semibold text-gray-800">Edit - Hospital</h2>
                 <button onClick={() => setEditHospital(null)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors">
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
