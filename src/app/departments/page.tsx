@@ -10,6 +10,7 @@ const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
 const emptyForm = {
   title: '',
   description: '',
+  image: '',
 };
 
 export default function DepartmentsPage() {
@@ -20,6 +21,8 @@ export default function DepartmentsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   useEffect(() => {
     fetchDepartments();
@@ -27,16 +30,26 @@ export default function DepartmentsPage() {
 
   const fetchDepartments = async () => {
     try {
+      console.log('📡 Fetching departments...');
       const response = await api.get('/departments/admin/all');
+      console.log('✅ Departments fetched:', response.data);
       setDepartments(response.data);
     } catch (err) {
-      console.error('Failed to fetch departments:', err);
+      console.error('❌ Failed to fetch departments:', err);
     }
   };
 
   const set = (k: keyof typeof emptyForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,14 +61,34 @@ export default function DepartmentsPage() {
     setLoading(true);
     setError('');
     try {
+      let imageUrl = '';
+      
+      // Upload image first if selected
+      if (imageFile) {
+        console.log('📤 Uploading image...');
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        const uploadRes = await api.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        imageUrl = uploadRes.data.url;
+        console.log('✅ Image uploaded:', imageUrl);
+      }
+      
+      console.log('📤 Creating department:', { title: form.title, description: form.description, image: imageUrl });
       const { data } = await api.post('/departments', {
         title: form.title.trim(),
         description: form.description.trim() || undefined,
+        image: imageUrl || undefined,
       });
+      console.log('✅ Department created:', data);
       setDepartments((prev) => [...prev, data]);
       setShowModal(false);
       setForm(emptyForm);
+      setImageFile(null);
+      setImagePreview('');
     } catch (err: any) {
+      console.error('❌ Error creating department:', err);
       setError(err.response?.data?.message || 'Failed to create department');
     } finally {
       setLoading(false);
@@ -72,13 +105,28 @@ export default function DepartmentsPage() {
     setLoading(true);
     setError('');
     try {
+      let imageUrl = form.image;
+      
+      // Upload new image if selected
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        const uploadRes = await api.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        imageUrl = uploadRes.data.url;
+      }
+      
       const { data } = await api.put(`/departments/${editDepartment._id}`, {
         title: form.title.trim(),
         description: form.description.trim() || undefined,
+        image: imageUrl || undefined,
       });
       setDepartments((prev) => prev.map((d) => d._id === data._id ? data : d));
       setEditDepartment(null);
       setForm(emptyForm);
+      setImageFile(null);
+      setImagePreview('');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update department');
     } finally {
@@ -113,6 +161,8 @@ export default function DepartmentsPage() {
     setEditDepartment(null);
     setForm(emptyForm);
     setError('');
+    setImageFile(null);
+    setImagePreview('');
   };
 
   const openEditModal = (department: Department) => {
@@ -120,9 +170,12 @@ export default function DepartmentsPage() {
     setForm({
       title: department.title,
       description: department.description || '',
+      image: department.image || '',
     });
     setShowModal(false);
     setError('');
+    setImageFile(null);
+    setImagePreview(department.image || '');
   };
 
   const filteredDepartments = departments.filter(d =>
@@ -210,19 +263,30 @@ export default function DepartmentsPage() {
         <table className="w-full text-sm" style={{ minWidth: '550px' }}>
           <thead>
             <tr className="border-b border-gray-100 bg-white sticky top-0 z-10">
-              {['Title', 'Description', 'Status', 'Created', 'Actions'].map((h) => (
+              {['Image', 'Title', 'Description', 'Status', 'Created', 'Actions'].map((h) => (
                 <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filteredDepartments.length === 0 && (
-              <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-300 text-sm">
+              <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-300 text-sm">
                 {searchTerm ? 'No departments found matching your search' : 'No departments found'}
               </td></tr>
             )}
             {filteredDepartments.map((d) => (
               <tr key={d._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                <td className="px-5 py-3.5">
+                  {d.image ? (
+                    <img src={d.image} alt={d.title} className="w-12 h-12 object-cover rounded-lg" />
+                  ) : (
+                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
+                </td>
                 <td className="px-5 py-3.5 font-medium text-gray-700">{d.title}</td>
                 <td className="px-5 py-3.5 text-gray-500 max-w-xs">
                   <div className="truncate">
@@ -303,6 +367,21 @@ export default function DepartmentsPage() {
                   />
                 </div>
 
+                <div>
+                  <label className={labelCls}>Department Image <span className="text-gray-400">(optional)</span></label>
+                  <input 
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className={inputCls}
+                  />
+                  {imagePreview && (
+                    <div className="mt-3">
+                      <img src={imagePreview} alt="Preview" className="w-24 h-24 object-cover rounded-lg border-2 border-gray-200" />
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex gap-3 pt-2">
                   <button type="submit" disabled={loading} 
                     className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-60 hover:opacity-90" 
@@ -357,6 +436,21 @@ export default function DepartmentsPage() {
                     rows={3}
                     className={`${inputCls} resize-none`} 
                   />
+                </div>
+
+                <div>
+                  <label className={labelCls}>Department Image <span className="text-gray-400">(optional)</span></label>
+                  <input 
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className={inputCls}
+                  />
+                  {imagePreview && (
+                    <div className="mt-3">
+                      <img src={imagePreview} alt="Preview" className="w-24 h-24 object-cover rounded-lg border-2 border-gray-200" />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 pt-2">
