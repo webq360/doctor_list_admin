@@ -222,6 +222,23 @@ export function convertBanglaToEnglish(banglaName: string | undefined): string |
 }
 
 /**
+ * Convert English location name to Bangla
+ * Returns Bangla name if found, otherwise returns original value
+ * Used when loading banner data for editing
+ */
+export function convertEnglishToBangla(englishName: string | undefined): string | undefined {
+  if (!englishName || englishName.trim() === '') return undefined;
+  
+  // Create reverse mapping (English → Bangla)
+  const ENGLISH_TO_BANGLA_MAP: Record<string, string> = {};
+  for (const [bangla, english] of Object.entries(BANGLA_TO_ENGLISH_MAP)) {
+    ENGLISH_TO_BANGLA_MAP[english] = bangla;
+  }
+  
+  return ENGLISH_TO_BANGLA_MAP[englishName] || englishName;
+}
+
+/**
  * Convert location object from Bangla to English
  * Used when saving banner data to backend
  */
@@ -252,5 +269,40 @@ export function convertLocationToEnglish(location: {
     division: divisionEnglish,
     district: districtEnglish,
     upazila: upazilaEnglish,
+  };
+}
+
+/**
+ * Convert location object from English to Bangla
+ * Used when loading banner data for editing
+ */
+export function convertLocationToBangla(location: {
+  division?: string;
+  district?: string;
+  upazila?: string;
+} | undefined): {
+  division: string;
+  district: string;
+  upazila: string;
+} {
+  if (!location) {
+    return { division: '', district: '', upazila: '' };
+  }
+  
+  const { division, district, upazila } = location;
+  
+  const divisionBangla = convertEnglishToBangla(division) || '';
+  const districtBangla = convertEnglishToBangla(district) || '';
+  const upazilaBangla = convertEnglishToBangla(upazila) || '';
+  
+  console.log('📍 Location Converter: English → Bangla');
+  console.log(`   Division: ${division} → ${divisionBangla}`);
+  console.log(`   District: ${district} → ${districtBangla}`);
+  console.log(`   Upazila: ${upazila} → ${upazilaBangla}`);
+  
+  return {
+    division: divisionBangla,
+    district: districtBangla,
+    upazila: upazilaBangla,
   };
 }

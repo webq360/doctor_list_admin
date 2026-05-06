@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import api from '@/lib/api';
 import { DIVISIONS_BANGLA, getDistrictsBangla, getUpazilasBangla } from '@/lib/bd-locations';
-import { convertLocationToEnglish } from '@/lib/location-converter';
+import { convertLocationToEnglish, convertLocationToBangla } from '@/lib/location-converter';
 
 type BannerCategory = 'home_slider';
 
@@ -131,11 +131,7 @@ export default function BannersPage() {
         title: addForm.title,
         order: Number(addForm.order),
         category: activeTab,
-        ...(locationEnglish && { 
-          division: locationEnglish.division, 
-          district: locationEnglish.district, 
-          upazila: locationEnglish.upazila 
-        }),
+        ...(locationEnglish && { location: locationEnglish }),
       });
       setAddForm(emptyForm); setAddImageFile(null); setAddImagePreview('');
       if (addFileRef.current) addFileRef.current.value = '';
@@ -149,12 +145,16 @@ export default function BannersPage() {
   /* ── Edit ── */
   const openEdit = (b: Banner) => {
     setEditBanner(b);
+    
+    // Convert English location from database to Bangla for display
+    const locationBangla = convertLocationToBangla(b.location);
+    
     setEditForm({
       title: b.title || '',
       order: String(b.order),
-      division: b.location?.division || '',
-      district: b.location?.district || '',
-      upazila: b.location?.upazila || '',
+      division: locationBangla.division,
+      district: locationBangla.district,
+      upazila: locationBangla.upazila,
     });
     setEditImageFile(null);
     setEditImagePreview(b.imageUrl);
