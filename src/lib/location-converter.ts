@@ -47,6 +47,18 @@ const BANGLA_TO_ENGLISH_MAP: Record<string, string> = {
   'কাপাসিয়া': 'Kapasia',
   'শ্রীপুর': 'Sreepur',
   
+  // Faridpur Upazilas
+  'ফরিদপুর সদর': 'Faridpur Sadar',
+  'আলফাডাঙ্গা': 'Alfadanga',
+  'ভাঙ্গা': 'Bhanga',
+  'বোয়ালমারী': 'Boalmari',
+  'চরভদ্রাসন': 'Charbhadrasan',
+  'মধুখালী': 'Madhukhali',
+  'মাদারীপুর': 'Madaripur',
+  'নগরকান্দা': 'Nagarkanda',
+  'সদরপুর': 'Sadarpur',
+  'সালথা': 'Saltha',
+  
   // Chittagong Division Districts
   'কক্সবাজার': 'Cox\'s Bazar',
   'কুমিল্লা': 'Comilla',
