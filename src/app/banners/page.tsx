@@ -2,20 +2,10 @@
 import { useEffect, useRef, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import api from '@/lib/api';
-import { DIVISIONS, getDistricts, getUpazilas } from '@/lib/bd-locations';
+import { DIVISIONS_BANGLA, getDistrictsBangla, getUpazilasBangla } from '@/lib/bd-locations';
+import { convertLocationToEnglish } from '@/lib/location-converter';
 
-type BannerCategory =
-  | 'home_slider'
-  | 'hospital_slider'
-  | 'doctor_list'
-  | 'ambulance'
-  | 'hospital'
-  | 'blood_bank'
-  | 'physiotherapy'
-  | 'eye_care'
-  | 'dental_clinic'
-  | 'drug_rehabilitation'
-  | 'hearing_aid';
+type BannerCategory = 'home_slider';
 
 interface Banner {
   _id: string;
@@ -28,17 +18,7 @@ interface Banner {
 }
 
 const TABS: { key: BannerCategory; label: string; icon: string }[] = [
-  { key: 'home_slider',        label: 'Home Slider',    icon: '🏠' },
-  { key: 'hospital_slider',    label: 'Hospital Slider', icon: '🏥' },
-  { key: 'doctor_list',        label: 'Doctor List',    icon: '🩺' },
-  { key: 'ambulance',          label: 'Ambulance',      icon: '🚑' },
-  { key: 'hospital',           label: 'Hospital',       icon: '🏥' },
-  { key: 'blood_bank',         label: 'Blood Bank',     icon: '🩸' },
-  { key: 'physiotherapy',      label: 'Physiotherapy',  icon: '🦴' },
-  { key: 'eye_care',           label: 'Eye Care',       icon: '👁️' },
-  { key: 'dental_clinic',      label: 'Dental Clinic',  icon: '🦷' },
-  { key: 'drug_rehabilitation',label: 'Drug Rehab',     icon: '💊' },
-  { key: 'hearing_aid',        label: 'Hearing Aid',    icon: '👂' },
+  { key: 'home_slider', label: 'Home Slider', icon: '🏠' },
 ];
 
 const emptyForm = { title: '', order: '0', division: '', district: '', upazila: '' };
@@ -53,34 +33,34 @@ function LocationFields({
   division: string; district: string; upazila: string;
   onChange: (k: 'division' | 'district' | 'upazila', v: string) => void;
 }) {
-  const districts = getDistricts(division);
-  const upazilas = getUpazilas(division, district);
+  const districts = getDistrictsBangla(division);
+  const upazilas = getUpazilasBangla(division, district);
   return (
     <div className="space-y-3">
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
         Location <span className="normal-case font-normal">(optional — blank = all locations)</span>
       </p>
       <div>
-        <label className={labelCls}>Division</label>
+        <label className={labelCls}>বিভাগ (Division)</label>
         <select value={division} onChange={(e) => onChange('division', e.target.value)} className={`${inputCls} text-gray-700`}>
-          <option value="">All Divisions (Global)</option>
-          {DIVISIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+          <option value="">সকল বিভাগ (All Divisions)</option>
+          {DIVISIONS_BANGLA.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
       </div>
       {division && (
         <div>
-          <label className={labelCls}>District</label>
+          <label className={labelCls}>জেলা (District)</label>
           <select value={district} onChange={(e) => onChange('district', e.target.value)} className={`${inputCls} text-gray-700`}>
-            <option value="">All Districts</option>
+            <option value="">সকল জেলা (All Districts)</option>
             {districts.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
       )}
       {district && (
         <div>
-          <label className={labelCls}>Upazila</label>
+          <label className={labelCls}>উপজেলা (Upazila)</label>
           <select value={upazila} onChange={(e) => onChange('upazila', e.target.value)} className={`${inputCls} text-gray-700`}>
-            <option value="">All Upazilas</option>
+            <option value="">সকল উপজেলা (All Upazilas)</option>
             {upazilas.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
         </div>
@@ -139,12 +119,23 @@ export default function BannersPage() {
       const fd = new FormData();
       fd.append('image', addImageFile);
       const { data: up } = await api.post('/upload/banner', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      // Convert Bangla to English using location converter
+      const locationEnglish = convertLocationToEnglish({
+        division: addForm.division,
+        district: addForm.district,
+        upazila: addForm.upazila,
+      });
+      
       await api.post('/banners', {
         imageUrl: up.url,
         title: addForm.title,
         order: Number(addForm.order),
         category: activeTab,
-        ...(addForm.division && { division: addForm.division, district: addForm.district || undefined, upazila: addForm.upazila || undefined }),
+        ...(locationEnglish && { 
+          division: locationEnglish.division, 
+          district: locationEnglish.district, 
+          upazila: locationEnglish.upazila 
+        }),
       });
       setAddForm(emptyForm); setAddImageFile(null); setAddImagePreview('');
       if (addFileRef.current) addFileRef.current.value = '';
@@ -190,13 +181,18 @@ export default function BannersPage() {
         const { data: up } = await api.post('/upload/banner', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         imageUrl = up.url;
       }
+      // Convert Bangla to English using location converter
+      const locationEnglish = convertLocationToEnglish({
+        division: editForm.division,
+        district: editForm.district,
+        upazila: editForm.upazila,
+      });
+      
       const { data } = await api.patch(`/banners/${editBanner._id}`, {
         imageUrl,
         title: editForm.title,
         order: Number(editForm.order),
-        location: editForm.division
-          ? { division: editForm.division, district: editForm.district || undefined, upazila: editForm.upazila || undefined }
-          : undefined,
+        location: locationEnglish,
       });
       setBanners((p) => p.map((x) => x._id === data._id ? data : x));
       setEditBanner(null);
@@ -235,18 +231,21 @@ export default function BannersPage() {
         </button>
       }
     >
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {TABS.map((t) => (
-          <button key={t.key} onClick={() => setActiveTab(t.key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === t.key ? 'text-white' : 'bg-white border border-gray-100 text-gray-500 hover:bg-gray-50'}`}
-            style={activeTab === t.key ? { background: '#2B3EE6' } : {}}>
-            <span>{t.icon}</span>{t.label}
-            <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-md ${activeTab === t.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-400'}`}>
-              {banners.filter((b) => b.category === t.key).length}
-            </span>
-          </button>
-        ))}
+      {/* Header Info */}
+      <div className="mb-6 p-4 bg-white rounded-2xl border border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ background: '#EEF0FF' }}>
+            🏠
+          </div>
+          <div className="flex-1">
+            <h2 className="text-base font-semibold text-gray-800">Home Slider Banners</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Manage banners displayed on the home screen</p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-gray-800">{banners.filter((b) => b.category === 'home_slider').length}</p>
+            <p className="text-xs text-gray-400">Total Banners</p>
+          </div>
+        </div>
       </div>
 
       {/* Banner Grid */}
@@ -339,7 +338,7 @@ export default function BannersPage() {
 
       {/* ══ Add Modal ══ */}
       {showAdd && (
-        <Modal title={`Add ${TABS?.find((t) => t.key === activeTab)?.label || 'Banner'} Banner`} onClose={() => setShowAdd(false)}>
+        <Modal title="Add Home Slider Banner" onClose={() => setShowAdd(false)}>
           <form onSubmit={handleAdd} className="space-y-4">
             {addError && <p className="text-xs text-red-500 bg-red-50 px-4 py-2.5 rounded-xl">{addError}</p>}
             <ImageUpload preview={addImagePreview} fileRef={addFileRef}

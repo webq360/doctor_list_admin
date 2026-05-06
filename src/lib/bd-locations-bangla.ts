@@ -1,6 +1,4 @@
-// Bangladesh Locations - Now with Bangla support
-// Display in Bangla, store in English for API compatibility
-
+// Bangladesh Locations in Bangla (বাংলা)
 export const BD_LOCATIONS_BANGLA: Record<string, Record<string, string[]>> = {
   'ঢাকা': {
     'ঢাকা': ['ধানমন্ডি', 'গুলশান', 'মিরপুর', 'মোহাম্মদপুর', 'উত্তরা', 'মতিঝিল', 'তেজগাঁও', 'ডেমরা', 'খিলগাঁও', 'লালবাগ'],
@@ -80,20 +78,20 @@ export const BD_LOCATIONS_BANGLA: Record<string, Record<string, string[]>> = {
   },
 };
 
-// Mapping: Bangla to English (for API calls - backend expects English)
-export const BANGLA_TO_ENGLISH: Record<string, string> = {
-  'ঢাকা': 'Dhaka',
-  'চট্টগ্রাম': 'Chittagong',
-  'রাজশাহী': 'Rajshahi',
-  'খুলনা': 'Khulna',
-  'বরিশাল': 'Barisal',
-  'সিলেট': 'Sylhet',
-  'রংপুর': 'Rangpur',
-  'ময়মনসিংহ': 'Mymensingh',
-};
+// Helper to get divisions in Bangla
+export const DIVISIONS_BANGLA = Object.keys(BD_LOCATIONS_BANGLA);
 
-// Mapping: English to Bangla (for display)
-export const ENGLISH_TO_BANGLA: Record<string, string> = {
+// Helper to get districts for a division in Bangla
+export const getDistrictsBangla = (division: string): string[] =>
+  division ? Object.keys(BD_LOCATIONS_BANGLA[division] || {}) : [];
+
+// Helper to get upazilas for a division and district in Bangla
+export const getUpazilasBangla = (division: string, district: string): string[] =>
+  division && district ? BD_LOCATIONS_BANGLA[division]?.[district] || [] : [];
+
+// Mapping from English to Bangla (for conversion)
+export const ENGLISH_TO_BANGLA_MAP: Record<string, string> = {
+  // Divisions
   'Dhaka': 'ঢাকা',
   'Chittagong': 'চট্টগ্রাম',
   'Rajshahi': 'রাজশাহী',
@@ -104,117 +102,14 @@ export const ENGLISH_TO_BANGLA: Record<string, string> = {
   'Mymensingh': 'ময়মনসিংহ',
 };
 
-// Keep English version for backward compatibility
-export const BD_LOCATIONS: Record<string, Record<string, string[]>> = {
-  Dhaka: {
-    'Dhaka': ['Dhanmondi', 'Gulshan', 'Mirpur', 'Mohammadpur', 'Uttara', 'Motijheel', 'Tejgaon', 'Demra', 'Khilgaon', 'Lalbagh'],
-    'Gazipur': ['Gazipur Sadar', 'Kaliakair', 'Kaliganj', 'Kapasia', 'Sreepur'],
-    'Manikganj': ['Manikganj Sadar', 'Daulatpur', 'Ghior', 'Harirampur', 'Saturia', 'Shivalaya', 'Singair'],
-    'Munshiganj': ['Munshiganj Sadar', 'Gazaria', 'Lohajang', 'Sirajdikhan', 'Sreenagar', 'Tongibari'],
-    'Narayanganj': ['Narayanganj Sadar', 'Araihazar', 'Bandar', 'Rupganj', 'Sonargaon'],
-    'Narsingdi': ['Narsingdi Sadar', 'Belabo', 'Monohardi', 'Palash', 'Raipura', 'Shibpur'],
-    'Faridpur': ['Faridpur Sadar', 'Alfadanga', 'Bhanga', 'Boalmari', 'Charbhadrasan', 'Madhukhali', 'Nagarkanda', 'Sadarpur', 'Saltha'],
-    'Kishoreganj': ['Kishoreganj Sadar', 'Austagram', 'Bajitpur', 'Bhairab', 'Hossainpur', 'Itna', 'Karimganj', 'Katiadi', 'Kuliarchar', 'Mithamain', 'Nikli', 'Pakundia', 'Tarail'],
-    'Tangail': ['Tangail Sadar', 'Basail', 'Bhuapur', 'Delduar', 'Dhanbari', 'Ghatail', 'Gopalpur', 'Kalihati', 'Madhupur', 'Mirzapur', 'Nagarpur', 'Sakhipur'],
-  },
-  Chittagong: {
-    'Chittagong': ['Chandgaon', 'Double Mooring', 'Halishahar', 'Khulshi', 'Kotwali', 'Pahartali', 'Panchlaish', 'Patenga', 'Bayazid', 'Bakalia'],
-    'Cox\'s Bazar': ['Cox\'s Bazar Sadar', 'Chakaria', 'Kutubdia', 'Maheshkhali', 'Pekua', 'Ramu', 'Teknaf', 'Ukhia'],
-    'Comilla': ['Comilla Sadar', 'Barura', 'Brahmanpara', 'Burichang', 'Chandina', 'Chauddagram', 'Daudkandi', 'Debidwar', 'Homna', 'Laksam', 'Lalmai', 'Meghna', 'Muradnagar', 'Nangalkot', 'Titas'],
-    'Feni': ['Feni Sadar', 'Chhagalnaiya', 'Daganbhuiyan', 'Parshuram', 'Sonagazi'],
-    'Noakhali': ['Noakhali Sadar', 'Begumganj', 'Chatkhil', 'Companiganj', 'Hatiya', 'Kabirhat', 'Senbagh', 'Subarnachar'],
-    'Brahmanbaria': ['Brahmanbaria Sadar', 'Akhaura', 'Ashuganj', 'Bancharampur', 'Bijoynagar', 'Kasba', 'Nabinagar', 'Nasirnagar', 'Sarail'],
-    'Chandpur': ['Chandpur Sadar', 'Faridganj', 'Haimchar', 'Haziganj', 'Kachua', 'Matlab Dakshin', 'Matlab Uttar', 'Shahrasti'],
-    'Lakshmipur': ['Lakshmipur Sadar', 'Kamalnagar', 'Raipur', 'Ramganj', 'Ramgati'],
-    'Rangamati': ['Rangamati Sadar', 'Baghaichhari', 'Barkal', 'Belaichhari', 'Juraichhari', 'Kaptai', 'Kawkhali', 'Langadu', 'Naniarchar', 'Rajasthali'],
-    'Bandarban': ['Bandarban Sadar', 'Alikadam', 'Lama', 'Naikhongchhari', 'Rowangchhari', 'Ruma', 'Thanchi'],
-    'Khagrachari': ['Khagrachari Sadar', 'Dighinala', 'Lakshmichhari', 'Mahalchhari', 'Manikchhari', 'Matiranga', 'Panchhari', 'Ramgarh'],
-  },
-  Rajshahi: {
-    'Rajshahi': ['Boalia', 'Motihar', 'Rajpara', 'Shah Makhdum', 'Bagha', 'Bagmara', 'Charghat', 'Durgapur', 'Godagari', 'Mohanpur', 'Paba', 'Puthia', 'Tanore'],
-    'Bogura': ['Bogura Sadar', 'Adamdighi', 'Dhunat', 'Dhupchanchia', 'Gabtali', 'Kahaloo', 'Nandigram', 'Sariakandi', 'Shajahanpur', 'Sherpur', 'Shibganj', 'Sonatala'],
-    'Natore': ['Natore Sadar', 'Bagatipara', 'Baraigram', 'Gurudaspur', 'Lalpur', 'Singra'],
-    'Naogaon': ['Naogaon Sadar', 'Atrai', 'Badalgachhi', 'Dhamoirhat', 'Manda', 'Mahadebpur', 'Niamatpur', 'Patnitala', 'Porsha', 'Raninagar', 'Sapahar'],
-    'Pabna': ['Pabna Sadar', 'Atgharia', 'Bera', 'Bhangura', 'Chatmohar', 'Faridpur', 'Ishwardi', 'Santhia', 'Sujanagar'],
-    'Sirajganj': ['Sirajganj Sadar', 'Belkuchi', 'Chauhali', 'Kamarkhanda', 'Kazipur', 'Raiganj', 'Shahjadpur', 'Tarash', 'Ullahpara'],
-    'Chapainawabganj': ['Chapainawabganj Sadar', 'Bholahat', 'Gomastapur', 'Nachole', 'Shibganj'],
-    'Joypurhat': ['Joypurhat Sadar', 'Akkelpur', 'Kalai', 'Khetlal', 'Panchbibi'],
-  },
-  Khulna: {
-    'Khulna': ['Daulatpur', 'Khan Jahan Ali', 'Khulna Sadar', 'Sonadanga', 'Batiaghata', 'Dacope', 'Dumuria', 'Dighalia', 'Koyra', 'Paikgachha', 'Phultala', 'Rupsa', 'Terokhada'],
-    'Jessore': ['Jessore Sadar', 'Abhaynagar', 'Bagherpara', 'Chaugachha', 'Jhikargachha', 'Keshabpur', 'Manirampur', 'Sharsha'],
-    'Satkhira': ['Satkhira Sadar', 'Assasuni', 'Debhata', 'Kalaroa', 'Kaliganj', 'Shyamnagar', 'Tala'],
-    'Bagerhat': ['Bagerhat Sadar', 'Chitalmari', 'Fakirhat', 'Kachua', 'Mollahat', 'Mongla', 'Morrelganj', 'Rampal', 'Sarankhola'],
-    'Kushtia': ['Kushtia Sadar', 'Bheramara', 'Daulatpur', 'Khoksa', 'Kumarkhali', 'Mirpur'],
-    'Magura': ['Magura Sadar', 'Mohammadpur', 'Shalikha', 'Sreepur'],
-    'Meherpur': ['Meherpur Sadar', 'Gangni', 'Mujibnagar'],
-    'Chuadanga': ['Chuadanga Sadar', 'Alamdanga', 'Damurhuda', 'Jibannagar'],
-    'Narail': ['Narail Sadar', 'Kalia', 'Lohagara'],
-    'Jhenaidah': ['Jhenaidah Sadar', 'Harinakunda', 'Kaliganj', 'Kotchandpur', 'Maheshpur', 'Shailkupa'],
-  },
-  Barisal: {
-    'Barisal': ['Barisal Sadar', 'Agailjhara', 'Babuganj', 'Bakerganj', 'Banaripara', 'Gaurnadi', 'Hizla', 'Mehendiganj', 'Muladi', 'Wazirpur'],
-    'Bhola': ['Bhola Sadar', 'Borhanuddin', 'Char Fasson', 'Daulatkhan', 'Lalmohan', 'Manpura', 'Tazumuddin'],
-    'Patuakhali': ['Patuakhali Sadar', 'Bauphal', 'Dashmina', 'Dumki', 'Galachipa', 'Kalapara', 'Mirzaganj', 'Rangabali'],
-    'Pirojpur': ['Pirojpur Sadar', 'Bhandaria', 'Kawkhali', 'Mathbaria', 'Nazirpur', 'Nesarabad', 'Zianagar'],
-    'Jhalokati': ['Jhalokati Sadar', 'Kathalia', 'Nalchity', 'Rajapur'],
-    'Barguna': ['Barguna Sadar', 'Amtali', 'Bamna', 'Betagi', 'Patharghata', 'Taltali'],
-  },
-  Sylhet: {
-    'Sylhet': ['Sylhet Sadar', 'Beanibazar', 'Bishwanath', 'Companiganj', 'Fenchuganj', 'Golapganj', 'Gowainghat', 'Jaintiapur', 'Kanaighat', 'Osmani Nagar', 'South Surma', 'Zakiganj'],
-    'Moulvibazar': ['Moulvibazar Sadar', 'Barlekha', 'Juri', 'Kamalganj', 'Kulaura', 'Rajnagar', 'Sreemangal'],
-    'Habiganj': ['Habiganj Sadar', 'Ajmiriganj', 'Bahubal', 'Baniachong', 'Chunarughat', 'Lakhai', 'Madhabpur', 'Nabiganj'],
-    'Sunamganj': ['Sunamganj Sadar', 'Bishwamvarpur', 'Chhatak', 'Derai', 'Dharampasha', 'Dowarabazar', 'Jagannathpur', 'Jamalganj', 'Sullah', 'Tahirpur'],
-  },
-  Rangpur: {
-    'Rangpur': ['Rangpur Sadar', 'Badarganj', 'Gangachara', 'Kaunia', 'Mithapukur', 'Pirgachha', 'Pirganj', 'Taraganj'],
-    'Dinajpur': ['Dinajpur Sadar', 'Birampur', 'Birganj', 'Biral', 'Bochaganj', 'Chirirbandar', 'Fulbari', 'Ghoraghat', 'Hakimpur', 'Kaharole', 'Khansama', 'Nawabganj', 'Parbatipur'],
-    'Gaibandha': ['Gaibandha Sadar', 'Fulchhari', 'Gobindaganj', 'Palashbari', 'Sadullapur', 'Saghata', 'Sundarganj'],
-    'Kurigram': ['Kurigram Sadar', 'Bhurungamari', 'Char Rajibpur', 'Chilmari', 'Nageshwari', 'Phulbari', 'Rajarhat', 'Raumari', 'Ulipur'],
-    'Lalmonirhat': ['Lalmonirhat Sadar', 'Aditmari', 'Hatibandha', 'Kaliganj', 'Patgram'],
-    'Nilphamari': ['Nilphamari Sadar', 'Dimla', 'Domar', 'Jaldhaka', 'Kishoreganj', 'Saidpur'],
-    'Panchagarh': ['Panchagarh Sadar', 'Atwari', 'Boda', 'Debiganj', 'Tetulia'],
-    'Thakurgaon': ['Thakurgaon Sadar', 'Baliadangi', 'Haripur', 'Pirganj', 'Ranisankail'],
-  },
-  Mymensingh: {
-    'Mymensingh': ['Mymensingh Sadar', 'Bhaluka', 'Dhobaura', 'Fulbaria', 'Gaffargaon', 'Gauripur', 'Haluaghat', 'Ishwarganj', 'Muktagachha', 'Nandail', 'Phulpur', 'Trishal'],
-    'Jamalpur': ['Jamalpur Sadar', 'Baksiganj', 'Dewanganj', 'Islampur', 'Madarganj', 'Melandaha', 'Sarishabari'],
-    'Netrokona': ['Netrokona Sadar', 'Atpara', 'Barhatta', 'Durgapur', 'Kalmakanda', 'Kendua', 'Khaliajuri', 'Madan', 'Mohanganj', 'Purbadhala'],
-    'Sherpur': ['Sherpur Sadar', 'Jhenaigati', 'Nakla', 'Nalitabari', 'Sreebardi'],
-  },
-};
-
-export const DIVISIONS = Object.keys(BD_LOCATIONS);
-
-export const getDistricts = (division: string): string[] =>
-  division ? Object.keys(BD_LOCATIONS[division] || {}) : [];
-
-export const getUpazilas = (division: string, district: string): string[] =>
-  division && district ? BD_LOCATIONS[division]?.[district] || [] : [];
-
-// Bangla helpers
-export const DIVISIONS_BANGLA = Object.keys(BD_LOCATIONS_BANGLA);
-
-export const getDistrictsBangla = (division: string): string[] =>
-  division ? Object.keys(BD_LOCATIONS_BANGLA[division] || {}) : [];
-
-export const getUpazilasBangla = (division: string, district: string): string[] =>
-  division && district ? BD_LOCATIONS_BANGLA[division]?.[district] || [] : [];
-
-// Helper to convert Bangla selection to English for API
-export const convertBanglaToEnglish = (banglaValue: string, type: 'division' | 'district' | 'upazila'): string => {
-  if (type === 'division') {
-    return BANGLA_TO_ENGLISH[banglaValue] || banglaValue;
-  }
-  // For districts and upazilas, we need to search through the data
-  // For now, return as-is (you can extend this if needed)
-  return banglaValue;
-};
-
-// Helper to convert English to Bangla for display
-export const convertEnglishToBangla = (englishValue: string, type: 'division' | 'district' | 'upazila'): string => {
-  if (type === 'division') {
-    return ENGLISH_TO_BANGLA[englishValue] || englishValue;
-  }
-  return englishValue;
+// Mapping from Bangla to English (for API calls)
+export const BANGLA_TO_ENGLISH_MAP: Record<string, string> = {
+  'ঢাকা': 'Dhaka',
+  'চট্টগ্রাম': 'Chittagong',
+  'রাজশাহী': 'Rajshahi',
+  'খুলনা': 'Khulna',
+  'বরিশাল': 'Barisal',
+  'সিলেট': 'Sylhet',
+  'রংপুর': 'Rangpur',
+  'ময়মনসিংহ': 'Mymensingh',
 };
