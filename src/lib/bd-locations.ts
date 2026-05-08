@@ -94,8 +94,9 @@ export const BD_LOCATIONS_BANGLA: Record<string, Record<string, string[]>> = {
   },
 };
 
-// Mapping: Bangla to English (for API calls - backend expects English)
-export const BANGLA_TO_ENGLISH: Record<string, string> = {
+// Mapping: Bangla to English (DEPRECATED - no longer needed, use Bangla everywhere)
+// Kept for reference only
+const BANGLA_TO_ENGLISH_DEPRECATED: Record<string, string> = {
   'ঢাকা': 'Dhaka',
   'চট্টগ্রাম': 'Chittagong',
   'রাজশাহী': 'Rajshahi',
@@ -106,8 +107,9 @@ export const BANGLA_TO_ENGLISH: Record<string, string> = {
   'ময়মনসিংহ': 'Mymensingh',
 };
 
-// Mapping: English to Bangla (for display)
-export const ENGLISH_TO_BANGLA: Record<string, string> = {
+// Mapping: English to Bangla (DEPRECATED - no longer needed, use Bangla everywhere)
+// Kept for reference only
+const ENGLISH_TO_BANGLA_DEPRECATED: Record<string, string> = {
   'Dhaka': 'ঢাকা',
   'Chittagong': 'চট্টগ্রাম',
   'Rajshahi': 'রাজশাহী',
@@ -141,43 +143,45 @@ export const getDistrictsBangla = (division: string): string[] =>
 export const getUpazilasBangla = (division: string, district: string): string[] =>
   division && district ? BD_LOCATIONS_BANGLA[division]?.[district] || [] : [];
 
-// Helper to convert Bangla selection to English for API
-export const convertBanglaToEnglish = (banglaValue: string, type: 'division' | 'district' | 'upazila'): string => {
+// Helper to convert Bangla selection to English for API (DEPRECATED - no longer needed)
+// Kept for reference only
+const convertBanglaToEnglish_DEPRECATED = (banglaValue: string, type: 'division' | 'district' | 'upazila'): string => {
   if (type === 'division') {
-    return BANGLA_TO_ENGLISH[banglaValue] || banglaValue;
+    return BANGLA_TO_ENGLISH_DEPRECATED[banglaValue] || banglaValue;
   }
-  // For districts and upazilas, we need to search through the data
-  // For now, return as-is (you can extend this if needed)
   return banglaValue;
 };
 
-// Helper to convert English to Bangla for display
-export const convertEnglishToBangla = (englishValue: string, type: 'division' | 'district' | 'upazila'): string => {
+// Helper to convert English to Bangla for display (DEPRECATED - no longer needed)
+// Kept for reference only
+const convertEnglishToBangla_DEPRECATED = (englishValue: string, type: 'division' | 'district' | 'upazila'): string => {
   if (type === 'division') {
-    return ENGLISH_TO_BANGLA[englishValue] || englishValue;
+    return ENGLISH_TO_BANGLA_DEPRECATED[englishValue] || englishValue;
   }
   return englishValue;
 };
 
-// Convert Bangla location to English for API
-export const convertLocationToEnglish = (location: { division?: string; district?: string; upazila?: string }) => {
+// Convert Bangla location to English for API (DEPRECATED - no longer needed, use Bangla everywhere)
+// Kept for reference only
+const convertLocationToEnglish_DEPRECATED = (location: { division?: string; district?: string; upazila?: string }) => {
   if (!location.division && !location.district && !location.upazila) {
     return null;
   }
   return {
-    division: location.division ? BANGLA_TO_ENGLISH[location.division] || location.division : undefined,
+    division: location.division ? BANGLA_TO_ENGLISH_DEPRECATED[location.division] || location.division : undefined,
     district: location.district || undefined,
     upazila: location.upazila || undefined,
   };
 };
 
-// Convert English location from database to Bangla for display
-export const convertLocationToBangla = (location?: { division?: string; district?: string; upazila?: string }) => {
+// Convert English location from database to Bangla for display (DEPRECATED - no longer needed, use Bangla everywhere)
+// Kept for reference only
+const convertLocationToBangla_DEPRECATED = (location?: { division?: string; district?: string; upazila?: string }) => {
   if (!location) {
     return { division: '', district: '', upazila: '' };
   }
   return {
-    division: location.division ? ENGLISH_TO_BANGLA[location.division] || location.division : '',
+    division: location.division ? ENGLISH_TO_BANGLA_DEPRECATED[location.division] || location.division : '',
     district: location.district || '',
     upazila: location.upazila || '',
   };
