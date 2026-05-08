@@ -2,8 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import api from '@/lib/api';
-import { DIVISIONS_BANGLA, getDistrictsBangla, getUpazilasBangla } from '@/lib/bd-locations';
-import { convertLocationToEnglish, convertLocationToBangla } from '@/lib/location-converter';
+import { DIVISIONS_BANGLA, getDistrictsBangla, getUpazilasBangla, convertLocationToEnglish, convertLocationToBangla } from '@/lib/bd-locations';
 
 type BannerCategory = 'home_slider';
 
