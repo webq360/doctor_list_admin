@@ -120,6 +120,20 @@ export default function DoctorsPage() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
+      // Validate required fields
+      if (!form.name || !form.fees) {
+        setError('Name and fees are required');
+        setLoading(false);
+        return;
+      }
+
+      // Validate location is added
+      if (!form.locations || form.locations.length === 0) {
+        setError('At least one location must be added');
+        setLoading(false);
+        return;
+      }
+
       let profileImageUrl;
       if (profileImage) {
         try {
@@ -155,6 +169,13 @@ export default function DoctorsPage() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
+      // Validate location is added
+      if (!editDoctor.locations || editDoctor.locations.length === 0) {
+        setError('At least one location must be added');
+        setLoading(false);
+        return;
+      }
+
       // Handle profile image upload if changed
       let profileImageUrl = editDoctor.profileImage;
       if (profileImage) {
