@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import api from '@/lib/api';
-import { DIVISIONS_BANGLA, getDistrictsBangla, getUpazilasBangla, convertLocationToEnglish, convertLocationToBangla } from '@/lib/bd-locations';
+import { DIVISIONS_BANGLA, getDistrictsBangla, getUpazilasBangla } from '@/lib/bd-locations';
 
 type BannerCategory = 'home_slider';
 
@@ -118,19 +118,22 @@ export default function BannersPage() {
       const fd = new FormData();
       fd.append('image', addImageFile);
       const { data: up } = await api.post('/upload/banner', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      // Convert Bangla to English using location converter
-      const locationEnglish = convertLocationToEnglish({
-        division: addForm.division,
-        district: addForm.district,
-        upazila: addForm.upazila,
-      });
+      
+      // Send Bangla location directly (no conversion needed)
+      const location = addForm.division || addForm.district || addForm.upazila 
+        ? {
+            division: addForm.division,
+            district: addForm.district,
+            upazila: addForm.upazila,
+          }
+        : undefined;
       
       await api.post('/banners', {
         imageUrl: up.url,
         title: addForm.title,
         order: Number(addForm.order),
         category: activeTab,
-        ...(locationEnglish && { location: locationEnglish }),
+        ...(location && { location }),
       });
       setAddForm(emptyForm); setAddImageFile(null); setAddImagePreview('');
       if (addFileRef.current) addFileRef.current.value = '';
@@ -145,15 +148,13 @@ export default function BannersPage() {
   const openEdit = (b: Banner) => {
     setEditBanner(b);
     
-    // Convert English location from database to Bangla for display
-    const locationBangla = convertLocationToBangla(b.location);
-    
+    // Use Bangla location directly from database (no conversion needed)
     setEditForm({
       title: b.title || '',
       order: String(b.order),
-      division: locationBangla.division,
-      district: locationBangla.district,
-      upazila: locationBangla.upazila,
+      division: b.location?.division || '',
+      district: b.location?.district || '',
+      upazila: b.location?.upazila || '',
     });
     setEditImageFile(null);
     setEditImagePreview(b.imageUrl);
@@ -180,18 +181,21 @@ export default function BannersPage() {
         const { data: up } = await api.post('/upload/banner', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         imageUrl = up.url;
       }
-      // Convert Bangla to English using location converter
-      const locationEnglish = convertLocationToEnglish({
-        division: editForm.division,
-        district: editForm.district,
-        upazila: editForm.upazila,
-      });
+      
+      // Send Bangla location directly (no conversion needed)
+      const location = editForm.division || editForm.district || editForm.upazila
+        ? {
+            division: editForm.division,
+            district: editForm.district,
+            upazila: editForm.upazila,
+          }
+        : undefined;
       
       const { data } = await api.patch(`/banners/${editBanner._id}`, {
         imageUrl,
         title: editForm.title,
         order: Number(editForm.order),
-        location: locationEnglish,
+        location,
       });
       setBanners((p) => p.map((x) => x._id === data._id ? data : x));
       setEditBanner(null);

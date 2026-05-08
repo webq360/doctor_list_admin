@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import api from '@/lib/api';
-import { DIVISIONS, getDistricts, getUpazilas } from '@/lib/bd-locations';
+import { DIVISIONS_BANGLA as DIVISIONS, getDistrictsBangla as getDistricts, getUpazilasBangla as getUpazilas } from '@/lib/bd-locations';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-400 transition-colors';

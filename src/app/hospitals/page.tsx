@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import api from '@/lib/api';
 import { Hospital } from '@/types';
-import { DIVISIONS, getDistricts, getUpazilas } from '@/lib/bd-locations';
+import { DIVISIONS_BANGLA as DIVISIONS, getDistrictsBangla as getDistricts, getUpazilasBangla as getUpazilas } from '@/lib/bd-locations';
 
 const emptyForm = { 
   name: '', 
